@@ -16,7 +16,6 @@ set.seed(731)
 pars_sims <- matrix(c(0,0,0.5,0,5,0,5,1),ncol = 2, byrow = TRUE) ## sigma, phi by scenario
 border_mat <- matrix(c(5,0,0,5,0,0,5,5),ncol = 2, byrow = FALSE) ## domain
 
-
 ## initial examples (for viz)
 for(isim in 1:4){
 tmp <- grf(1e3, grid = 'reg', 
@@ -70,8 +69,8 @@ library(scales)
 ## the true and observed mean & cv
 
 ## show sampling routine
-n_stations <- 25
-stations <- sample(seq(length(sim1$data)),n_stations) ## 100 random sampling sites within domain (don't change)
+n_stations <- 50
+stations <- sample(seq(length(sim1$data)),n_stations) ##  random sampling sites within domain (don't change)
 total_area <- length(sim1$data) ## the number of cells; assume each cell = 1
 
 big_sampler <- matrix(NA, nrow = 4*n_reps, ncol = 10) ## replicates x sims x variable
@@ -80,13 +79,22 @@ for(isim in 1:4){ ## loop four scenarios
 for(irep in 1:n_reps){ ## loop n_rep realizations
 
 sim_true <- subset(big_sims, simid == paste0('sim',isim) & repid == irep)['x.data']
-sim_true <- rescale(sim_true$x.data, to=c(0,1)) ## do away with negs
-true_mean <- sum(sim_true)
+
+#sim_true <- rescale(sim_true$x.data, to=c(1,2)) ## do away with negs
+true_mean <- sum(sim_true$x.data)
+#cat(true_mean,"\n")
+
+#true_mean <- sum(sim_true$x.data)
+
 true_sd <- sqrt(var(sim_true))
 true_cv <- true_sd/true_mean
 
-sim_sample <- subset(big_sims, simid == paste0('sim',isim) & cellid %in% stations & repid == irep)['x.data']
-sim_sample <- rescale(sim_sample$x.data, to=c(0,1)) ## do away with negs
+## no obs error - just read the value in cell
+sim_sample_raw <- subset(big_sims, simid == paste0('sim',isim) & cellid %in% stations & repid == irep)['x.data']
+## sample with observation error
+sim_sample <- rnorm(n_stations, mean = sim_sample_raw$x.data, sd = 0.2)
+
+#sim_sample <- rescale(sim_sample$x.data, to=c(1,2)) ## do away with negs
 sim_mean <- mean(sim_sample) * total_area ## observed index
 sim_sd <- sqrt(var(sim_sample)*total_area^2 / n_stations)
 sim_cv <- sim_sd/sim_mean
@@ -135,7 +143,7 @@ scale_fill_viridis_c()+
 facet_wrap(~id, ncol = 2) +
 theme_void() +
 geom_point(data=subset(sims, cellid %in% stations), 
-pch = 4, color = 'blue', size = 3) +
+pch = 4, color = '#2b9288', size = 3) +
 scale_y_discrete(expand = c(0,0))+
 scale_x_discrete(expand = c(0,0))+
 theme(legend.position = 'none', strip.text = element_blank())
@@ -144,7 +152,7 @@ ggsave(last_plot(), file = here('figs','grf_example_25stations.png'),
 width = 8, height = 8, unit = 'in', dpi = 520)
 
 
-## Sampling error ----
+## Sampling distortion ----
 big_sampler_df %>%
 select(replicate, simid, sim_mean, true_mean, true_cv, sim_cv) %>%
 reshape2::melt(id = c('replicate', 'simid')) %>%
@@ -152,24 +160,32 @@ mutate(
 src = ifelse(grepl('sim',variable),'sim','true'),
 variable= ifelse(grepl('cv',str_sub(variable,-4)),'cv',str_sub(variable,-4))) -> big_sampler_df_reshape
 
+
 ggplot(data = subset(big_sampler_df_reshape,variable == 'mean'), 
 aes(color = src))+
-geom_boxplot(aes(x = factor(simid), y = value)) +
-scale_color_manual(values = c('blue','grey22'), labels = c('Survey','Population') ) +
+geom_boxplot(aes(  y = value),fill = NA) +
+facet_wrap(~factor(simid)) +
+scale_color_manual(values = c('#2b9288','grey22'), labels = c('Survey','Population') ) +
 scale_x_discrete(labels = c('Low Morpho, Low Spatial', 'Low Morpho, High Spatial',
 'High Morpho, Low Spatial','High Morpho, High Spatial'))+
-labs(y = 'Mean Biomass in Domain', color = '')+
-theme(axis.title.x = element_blank())
+labs(y = 'Biomass in Domain', color = '')+
+geom_hline(yintercept = 0, linetype = 'dashed',color = 'grey77') +
+theme_minimal()+
+theme(axis.title.x = element_blank(), axis.text.y = element_blank(),
+panel.grid = element_blank(),
+legend.position = 'bottom', panel.background = element_blank(), strip.text = element_blank())
 
 ggsave(last_plot(),
-file = here('figs','mean_biomass_replicates_25stations.png'),
+file = here('figs','mean_biomass_replicates_50stations.png'),
 width = 6, height = 6, unit = 'in')
 
 
 big_sampler_df_reshape %>% 
 tidyr::pivot_wider(id_cols = c('replicate','simid','src'), 
 values_from = 'value', names_from = 'variable') %>% 
-mutate(lci = mean-mean*cv, uci = mean+mean*cv) -> big_sampler_df_reshape2
+mutate(lci = case_when(src == 'sim' ~ mean-mean*cv, src == 'true'~ mean ),
+uci = case_when(src == 'sim' ~ mean+mean*cv, src == 'true'~ mean )) %>%
+group_by(simid, src) %>% summarise(mean = mean(mean),lci = mean(lci),uci =  mean(uci)) -> big_sampler_df_reshape2
 
 
 big_sampler_df_reshape2 %>%
@@ -177,17 +193,23 @@ group_by(simid, src) %>%
 summarise(mean(mean),mean(cv))
 
 big_sampler_df_reshape2 %>%
-filter(replicate == 4) %>%
-ggplot(., aes(x = factor(simid), color = src)) +
-scale_color_manual(values = c('blue','grey22'), labels = c('Survey','Population') ) +
-scale_x_discrete(labels = c('Low Morpho, Low Spatial', 'Low Morpho, High Spatial',
-'High Morpho, Low Spatial','High Morpho, High Spatial'))+
+#filter(replicate == 4) %>%
+ggplot(., aes(x = interaction(factor(simid),src), color = src)) +
 geom_point(aes(y = mean)) +
+facet_wrap(~factor(simid), scales = 'free_x' ) +
+scale_color_manual(values = c('#2b9288','grey22'), labels = c('Survey','Population') ) +
+#scale_x_discrete(labels = c('Low Morpho, Low Spatial', 'Low Morpho, High Spatial',
+#'High Morpho, Low Spatial','High Morpho, High Spatial'))+
 labs(y = 'Biomass in Domain', color = '')+
-geom_errorbar(aes(ymin = lci, ymax = uci), width = 0)
-theme(axis.title.x = element_blank())
+geom_hline(yintercept = 0, linetype = 'dashed',color = 'grey77') +
+geom_errorbar(aes(ymin = lci, ymax = uci), width = 0)+
+theme_minimal()+
+theme(axis.title.x = element_blank(), axis.text = element_blank(),
+panel.grid = element_blank(),
+legend.position = 'bottom', panel.background = element_blank(), strip.text = element_blank())
+
 
 ggsave(last_plot(),
-file = here('figs','surv_biomass_replicates_25stations.png'),
+file = here('figs','surv_biomass_replicates_50stations.png'),
 width = 6, height = 6, unit = 'in')
 
