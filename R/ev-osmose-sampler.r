@@ -78,18 +78,18 @@ for(year in 1:n_y){
 }
 }
 
- 
+
 reshape2::melt(biomass_styi) %>%
-dplyr::rename('species' = Var1, 'strata' = Var2, 
-'year' = Var3, 'iteration' = Var4, 'biomass' = value) %>% 
+dplyr::rename('species' = Var1, 'strata' = Var2,
+'year' = Var3, 'iteration' = Var4, 'biomass' = value) %>%
 merge(.,grid_cells, by = 'strata') -> pop_bio
 
- 
+
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## Simulate SRS ----
-## Simulate Simple Random Designs at varying sampling efforts   
-##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-index_srs <- cv_srs <- rb_index_srs <- true_index <- array(NA, 
+## Simulate Simple Random Designs at varying sampling efforts
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+index_srs <- cv_srs <- rb_index_srs <- true_index <- array(NA,
 dim = c(n_s, n_y,n_iters),
 dimnames = list(spp_list,1:n_y,NULL))
 
@@ -97,22 +97,22 @@ set.seed(234)
 for(year in 1:n_y){
   for (iter in 1:n_iters) { ## Loop over iterations -- start
 
-    true_index[,year,iter] <-  rowSums(biomass_styi[,,year,iter]) 
-    
+    true_index[,year,iter] <-  rowSums(biomass_styi[,,year,iter])
+
     ## Randomly sample grid indices within domain
     srs_sample_idx <- sample(x = 1:n_t, size = target_n)
     ## extract population size of all ages, sexes, morphs at sampled cells (in year 1)
     ## returns a row for each species, columns are locations
-    srs_sample <- biomass_styi[,srs_sample_idx,year,iter] 
-    
+    srs_sample <- biomass_styi[,srs_sample_idx,year,iter]
+
     ## Calculate survey statistics by spp
     srs_tau <- total_area * rowMeans(srs_sample)
     srs_sd <- sqrt(apply(X = srs_sample, MARGIN = 1, FUN = var) *
                      total_area^2 / target_n)
-    
+
     ## Record Survey Performance Metrics
-    index_srs[ ,year, iter] <- srs_tau 
-    rb_index_srs[ ,year, iter] <- 
+    index_srs[ ,year, iter] <- srs_tau
+    rb_index_srs[ ,year, iter] <-
       100 * (srs_tau - true_index[,year,iter]) /  true_index[,year,iter]
     cv_srs[, year,iter] <-  srs_sd / srs_tau
 
@@ -135,13 +135,13 @@ facet_wrap(~species)
 
 ## compare time series (obs & error)
 bind_rows(reshape2::melt(true_index) %>%mutate(src = 'True Index'),
-reshape2::melt(index_srs) %>% mutate(src = 'SRS Index')) %>% 
-dplyr::rename('species' = Var1, 
+reshape2::melt(index_srs) %>% mutate(src = 'SRS Index')) %>%
+dplyr::rename('species' = Var1,
 'year' = Var2,'biomass' = value) %>%
 ## add a small offset to year for plotting
 mutate(year = ifelse(src == 'True Index', year+5e-1,year)) %>%
 group_by(species, year, src) %>%
-reframe(enframe(quantile(biomass, c(0.25, 0.5, 0.75)), "quantile", "biomass")) %>% 
+reframe(tibble::enframe(quantile(biomass, c(0.25, 0.5, 0.75)), "quantile", "biomass")) %>%
 tidyr::pivot_wider(id_cols = c(species,year,src),names_from = quantile, values_from = biomass) -> indices
 
 ggplot(indices, aes(x = year, color = src)) +
