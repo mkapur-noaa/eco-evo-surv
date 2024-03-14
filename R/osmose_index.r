@@ -98,3 +98,5 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
 
   return(gam_idx_mt)
 }
+
+# NOTE: You'll want to multiply these indices by two to get the total estimated index for a given year, because the predictions are only for the 50% of the area that was surveyed (if that makes sense). Basically, since I don't have access to the full grid for the area that the survey is representing, I am only predicting the total biomass of the surveyed area, here.
