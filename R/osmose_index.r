@@ -25,7 +25,7 @@ table(raw$species_name, raw$timestep)
 
 # Focus on one species for now
 single_sp <- raw |>
-  filter(species_name == "European Sprat") # could be anything!
+  filter(species == 3) # could be anything!
 unique(single_sp$timestep)
 
 survstep <- 25 # The timestep when the survey happens
@@ -55,13 +55,13 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
     stop("Survey timestep (when the survey happens) must be between 1 and 24, assuming data on true biomass are indexed every two weeks.")
   }
 
-  x <- unique(dat$timestep) / survey_timestep
-  y <- x[which(x == floor(x))]
-  survidx <- y * survey_timestep # vector of timesteps where you have data
-  if (length(survidx) == 0) {
+  nyr <- max(dat$timestep)/24
+  survsteps <- survey_timestep + seq(0, (nyr-1)*24, by = 24) # which timesteps have a survey in them
+
+  if (length(survsteps) == 0) {
     stop("No years with survey data.")
   }
-  survdat <- dat[which(dat$timestep %in% survidx), ]
+  survdat <- dat[which(dat$timestep %in% survsteps), ]
   survdat$year <- survdat$timestep / survey_timestep
 
   mod <- gam(
@@ -99,4 +99,7 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
   return(gam_idx_mt)
 }
 
+sprat_idx <- get_gam_index(dat = single_sp,survey_timestep = 12,grid = grid)
+
 # NOTE: You'll want to multiply these indices by two to get the total estimated index for a given year, because the predictions are only for the 50% of the area that was surveyed (if that makes sense). Basically, since I don't have access to the full grid for the area that the survey is representing, I am only predicting the total biomass of the surveyed area, here.
+
