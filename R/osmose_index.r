@@ -62,7 +62,9 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
     stop("No years with survey data.")
   }
   survdat <- dat[which(dat$timestep %in% survsteps), ]
-  survdat$year <- survdat$timestep / survey_timestep
+  for(i in 1:nrow(survdat)){
+    survdat$year[i] <- which(survsteps == survdat$timestep[i])
+  }
 
   mod <- gam(
     formula = true_biomass ~ as.factor(year) + # temporal
@@ -102,4 +104,16 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
 sprat_idx <- get_gam_index(dat = single_sp,survey_timestep = 12,grid = grid)
 
 # NOTE: You'll want to multiply these indices by two to get the total estimated index for a given year, because the predictions are only for the 50% of the area that was surveyed (if that makes sense). Basically, since I don't have access to the full grid for the area that the survey is representing, I am only predicting the total biomass of the surveyed area, here.
+db <- survdat |>
+  group_by(year) |>
+  summarize(db_total_biomass = sum(true_biomass))
 
+mb <- sprat_idx
+
+plot(db$year,db$db_total_biomass, xlab="year", ylab="index")
+lines(db$year,db$db_total_biomass)
+
+points(mb$year, mb$gam_total_biomass,col = 'red')
+lines(mb$year, mb$gam_total_biomass,col = 'red')
+
+legend('bottomright',legend = c('design-based','model-based'),col=c("black","red"), pch = c(1,1),lty=c(1,1))
