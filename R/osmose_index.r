@@ -1,0 +1,119 @@
+#################################################
+# Authors:
+#   Maia Kapur
+#   Megsie Siple
+# Description:
+# Compare a simple design-based estimator to a model-based one that includes spatiotemporal processes.
+#
+# From Maia: 'It would be nice to have a simple illustration of whether or not accounting for spatio-temporal processes in a standardization framework dramatically change(s)'
+#################################################
+
+library(tidyverse)
+library(mgcv)
+
+raw <- read.csv("data/sampler_raw.csv") # From Maia Feb 6 2024
+# Data description
+# lat: 52 vertical latitudinal cells
+# lon: 25 horizontal longitudinal cells
+# species/species name: integer and string ID for the species. For now I've mainly been inspecting IDs 8, 11, 0, and 3: Atlantic Cod, Whiting, Atl. Herring, European Sprat
+# timestep: 1-72, where each number is a bimonthly measure, so three years total. Might want to add a "year" column if you're experimenting with generating an annualized estimate.
+# true_biomass: this is actually the sampled/observed biomass, which would get summarized to create an annual value
+
+# Sample randomly from the grid at one timestep ---------------------------
+# We don't have data at every timestep for every species
+table(raw$species_name, raw$timestep)
+
+# Focus on one species for now
+single_sp <- raw |>
+  filter(species == 3) # could be anything!
+unique(single_sp$timestep)
+
+survstep <- 25 # The timestep when the survey happens
+
+single_sp |>
+  filter(timestep == survstep) |>
+  ggplot(aes(x = lon, y = lat, fill = log(true_biomass))) +
+  geom_tile() +
+  coord_equal()
+
+# For a simple random sample, the cells are already subsetted to the 'survey' locations (50% of cells, simple random sample). For now we will assume the survey visits a subset of cells but observes the ecosystem perfectly.
+
+# NOTE: Will need to fix this; we should be using the full grid to predict to. This estimate will only pertain to 50% of the area.
+grid <- raw |>
+  distinct(lon, lat)
+
+grid |>
+  ggplot(aes(x = lon, y = lat)) +
+  geom_tile(fill = "red") +
+  coord_equal()
+
+get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
+  # dat is the data for a single species - here we use true values from a SRS that assumes every observation is of the true state.
+  # survey_timestep is an index between 1 and 72 defining which bimonthly time point has data collected for it.
+  # grid is the survey grid (the full area that we want to extrapolate to)
+  if (survey_timestep < 1 | survey_timestep > 24) {
+    stop("Survey timestep (when the survey happens) must be between 1 and 24, assuming data on true biomass are indexed every two weeks.")
+  }
+
+  nyr <- max(dat$timestep)/24
+  survsteps <- survey_timestep + seq(0, (nyr-1)*24, by = 24) # which timesteps have a survey in them
+
+  if (length(survsteps) == 0) {
+    stop("No years with survey data.")
+  }
+  survdat <- dat[which(dat$timestep %in% survsteps), ]
+  for(i in 1:nrow(survdat)){
+    survdat$year[i] <- which(survsteps == survdat$timestep[i])
+  }
+
+  mod <- gam(
+    formula = true_biomass ~ as.factor(year) + # temporal
+      s(lon, lat, bs = c("ts")) + # spatial
+      s(lon, lat, bs = c("ts"), by = as.factor(year), id = 1), # spatiotemporal
+    family = tw(link = "log"),
+    data = survdat
+  )
+
+  # Replicate grid for each year we have data
+  grid_list <- list()
+
+  for (y in 1:length(unique(survdat$year))) {
+    df <- grid
+    df$year <- unique(survdat$year)[y]
+    grid_list[[y]] <- df
+  }
+
+  longgrid <- bind_rows(grid_list)
+  row.names(longgrid) <- NULL
+
+
+  pred_gam <- predict(mod,
+    type = "response",
+    newdata = longgrid
+  ) # This takes a long time.
+  pred_gam_df <- cbind(longgrid, pred_gam)
+  pred_gam_df$area <- 1 # default cell area
+
+  gam_idx_mt <- pred_gam_df |>
+    dplyr::group_by(year) |>
+    summarize(gam_total_biomass = sum(pred_gam))
+
+  return(gam_idx_mt)
+}
+
+sprat_idx <- get_gam_index(dat = single_sp,survey_timestep = 12,grid = grid)
+
+# NOTE: You'll want to multiply these indices by two to get the total estimated index for a given year, because the predictions are only for the 50% of the area that was surveyed (if that makes sense). Basically, since I don't have access to the full grid for the area that the survey is representing, I am only predicting the total biomass of the surveyed area, here.
+db <- survdat |>
+  group_by(year) |>
+  summarize(db_total_biomass = sum(true_biomass))
+
+mb <- sprat_idx
+
+plot(db$year,db$db_total_biomass, xlab="year", ylab="index")
+lines(db$year,db$db_total_biomass)
+
+points(mb$year, mb$gam_total_biomass,col = 'red')
+lines(mb$year, mb$gam_total_biomass,col = 'red')
+
+legend('bottomright',legend = c('design-based','model-based'),col=c("black","red"), pch = c(1,1),lty=c(1,1))
