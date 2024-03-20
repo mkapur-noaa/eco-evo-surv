@@ -10,8 +10,9 @@
 
 library(tidyverse)
 library(mgcv)
+library(here)
 
-raw <- read.csv("data/sampler_raw.csv") # From Maia Feb 6 2024
+raw <- read.csv(here::here("data","sampler_raw.csv")) # From Maia Feb 6 2024
 # Data description
 # lat: 52 vertical latitudinal cells
 # lon: 25 horizontal longitudinal cells
@@ -61,9 +62,9 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
   if (length(survsteps) == 0) {
     stop("No years with survey data.")
   }
-  survdat <- dat[which(dat$timestep %in% survsteps), ]
+  survdat <<- dat[which(dat$timestep %in% survsteps), ]
   for(i in 1:nrow(survdat)){
-    survdat$year[i] <- which(survsteps == survdat$timestep[i])
+    survdat$year[i] <<- which(survsteps == survdat$timestep[i])
   }
 
   mod <- gam(
