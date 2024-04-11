@@ -7,27 +7,22 @@
 ## established fixed sampling design for each year
 ## ensure that the survey is truly multispecies, sampling at the same location for all species in a given year
 
-build_survey_array <- function(n_years = length(2010:2099), fractional_coverage = 0.5) {
 
-# Create a data frame with all combinations of lat and long
-all_cells <- expand.grid(lat = 1:25, long = 1:52)
 
-# Function to sample 50% of the cells
-sample_cells <- function() {
-  sample_n <- nrow(all_cells) * fractional_coverage
-  sampled_cells <- sample_n(all_cells, sample_n)
-  return(sampled_cells)
-}
-
-# Replicate the sampling for each year
-survey_array <- replicate(n_years, sample_cells(), simplify = FALSE)
-
-# Add the year to each sampled data frame and bind them all together
-survey_array <- do.call(rbind, lapply(seq_along(survey_array), function(i) {
-  cbind(year = 2010 + i - 1, survey_array[[i]])
-}))
-
-  return(survey_array)
+build_survey_array <- function(n_years = length(2010:2099), fractional_coverage = 0.5){
+  #Create a data frame with all combinations of lat and long
+  all_cells <- expand.grid(lat = 1:25, long = 1:52)
+  # Function to sample 50% of the cells
+  sample_cells <- function() {
+    sample_n <- nrow(all_cells) * fractional_coverage
+    sampled_cells <- sample_n(all_cells, sample_n)
+    #return(sampled_cells)
+  }
+  # Replicate the sampling for each year
+  survey_array0 <- replicate(n_years, sample_cells(), simplify = FALSE)
+  # Add the year to each sampled data frame and bind them all together
+  survey_array0 <- do.call(rbind, lapply(seq_along(survey_array0), function(i){cbind(year = 2010 + i - 1, survey_array0[[i]])}))
+  #return(survey_array0)
 }
 
 # A function that samples a station for abundance (biomass or numbers) and age comps
