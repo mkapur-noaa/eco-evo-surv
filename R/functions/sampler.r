@@ -14,7 +14,7 @@ all_cells <- expand.grid(lat = 1:25, long = 1:52)
 
 # Function to sample 50% of the cells
 sample_cells <- function() {
-  sample_n <- nrow(all_cells) * 0.5
+  sample_n <- nrow(all_cells) * fractional_coverage
   sampled_cells <- sample_n(all_cells, sample_n)
   return(sampled_cells)
 }
