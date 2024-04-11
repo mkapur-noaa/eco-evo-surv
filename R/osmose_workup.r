@@ -1,6 +1,6 @@
 ## workup of evosmose outputs
-#0=AtlanticHerring 1=AtlanticMackerel 2=Sandeel 3=EuropeanSprat 4=NorwayPout
-# 5=EuropeanPlaice 6=CommonSole 7=Saithe 8=AtlanticCod 9=Haddock 10=HorseMackerel
+#0=AtlanticHerring 1=AtlanticMackerel 2=Sandeel 3=EuropeanSprat 4=NorwayPout 
+# 5=EuropeanPlaice 6=CommonSole 7=Saithe 8=AtlanticCod 9=Haddock 10=HorseMackerel 
 ##11=Whiting 12=CommonDab 13=GreyGurnard 14=Hake 15=Shrimp
 #https://pjbartlein.github.io/REarthSysSci/netCDF.html#reading-restructuring-and-writing-netcdf-files-in-r
 #install.packages('ncdf4')
@@ -9,16 +9,20 @@ library(dplyr)
 library(here)
 library(ggplot2)
 library(scales)
-#spp_of_interest <- c(0,1,3,5,8,11,13)
+#spp_of_interest <- c(0,1,3,5,8,11,13) 
 spp_of_interest <- c(8,11,0,3)
 spp_of_interest_idx <- spp_of_interest+1 ## for indexing into arrays
+
+
 
 spp.labs <-c("Atlantic Herring" , "Atlantic Mackerel" ,"Sandeel" ,"European Sprat","Norway Pout" ,
 "European Plaice","Common Sole","Saithe","Atlantic Cod","Haddock","Horse Mackerel" ,
 "Whiting","Common Dab","Grey Gurnard" ,"Hake","Shrimp")
 names(spp.labs) <- as.character(0:15)
 
-#In this file, you have some vectors and matrices (x, y, species, trophic level, size,
+spp.labs[spp_of_interest_idx]
+
+#In this file, you have some vectors and matrices (x, y, species, trophic level, size, 
 # abundance, age, genotype, ...).
 nc_path <- here('data','ns_snapshot_step2399.nc')
 ncin <- nc_open(nc_path)
@@ -32,7 +36,7 @@ spp <- ncvar_get(ncin,"species") ## index spp of interest
 lon <- ncvar_get(ncin,"x")[spp %in% spp_of_interest]
 lat <- ncvar_get(ncin,"y")[spp %in% spp_of_interest]
 age <- ncvar_get(ncin,"age")[spp %in% spp_of_interest]
-
+abundance <- ncvar_get(ncin,"abundance")[spp %in% spp_of_interest]
 
 tmp <- data.frame(species = spp[spp %in% spp_of_interest],
 lon, lat, age, abundance)
@@ -49,10 +53,9 @@ group_by(species) %>%
 mutate(abund_rescale =  rescale(abundance, to=c(0,1))) %>%
 ungroup()
 
-ggplot(step2399, aes(x = lon, y = lat, fill = abund_rescale)) +
-  geom_tile() +
-  coord_equal() +
-  facet_wrap(~species, labeller = labeller(species = spp.labs))
+ggplot(step2399, aes(x = lat, y = lon, fill = abund_rescale))+
+geom_tile()+coord_equal() +
+facet_wrap(~species, labeller = labeller(species = spp.labs))
 
 
 nc_path <- here('data','ns_spatialized_Simu0.nc')
@@ -62,11 +65,15 @@ names(ncin$var)
 dim(ncin)
 
 ## lat, lon, spp, yr
-biomass <- ncvar_get(ncin,"biomass")[,,,]  %>%
+biomass <- ncvar_get(ncin,"biomass")[,,,]  %>% 
 reshape2::melt(.) %>%
 filter(Var3 %in% spp_of_interest_idx)
 names(biomass) <- c('lat','lon','species','timestep','true_biomass')
 biomass$species <- biomass$species-1 ## revert to original ids, so it works with labels
+data.frame(spp.labs)
+
+biomass$species_name <- merge(biomass, data.frame(spp.labs), by.x = 'species', by.y = 'row.names')$spp.labs
+save(biomass, file = here('data','ns_spatialized_simu0_biomass.rda'))
 
 
 bio_filter_5054 <- biomass%>%
@@ -75,12 +82,12 @@ mutate(biomass_rescale =  rescale(true_biomass, to=c(0,1))) %>%
 ungroup() %>%
 filter(timestep %in% 50:54)
 
-maps <- ggplot(data = bio_filter_5054, aes(x = lat, y = lon,
+maps <- ggplot(data = bio_filter_5054, aes(x = lat, y = lon, 
 fill = biomass_rescale))+
 theme_void()+
 geom_raster()+
 scale_fill_viridis_c(na.value = NA)+
-theme(strip.text = element_text(size = 25),
+theme(strip.text = element_text(size = 25), 
 strip.text.y = element_blank(),
 legend.position = 'none')+
 facet_grid(species~timestep, labeller = labeller(species = spp.labs))
@@ -89,15 +96,15 @@ bio_filter_avg <- biomass%>%
 group_by(species, lat, lon) %>%
 summarise(mtb = mean(true_biomass,na.rm = TRUE)) %>%
 ungroup() %>%
-mutate(biomass_rescale =  rescale(mtb, to=c(0,1)))
+mutate(biomass_rescale =  rescale(mtb, to=c(0,1))) 
 head(bio_filter_avg)
 
-maps <- ggplot(bio_filter_avg, aes(x = lat, y = lon,
+maps <- ggplot(bio_filter_avg, aes(x = lat, y = lon, 
 fill = biomass_rescale))+
 theme_void()+
 geom_raster()+
 scale_fill_viridis_c(na.value = NA)+
-theme(strip.text = element_text(size = 25),
+theme(strip.text = element_text(size = 25), 
 strip.text.y = element_blank(),
 legend.position = 'none')+
 facet_grid(species, labeller = labeller(species = spp.labs))
@@ -118,14 +125,14 @@ station_id <- sample(1:n_cells,n_stations) ##  random sampling sites within doma
 stations <- domain[station_id,] ## lat and lon of sampling sites
 total_area <- n_cells  ## assumes each station has an area of 1
 
-
+ 
 ## get biomass @ stations
 sample_raw <- right_join(biomass, stations, by = c("lat","lon")) %>% filter(!is.na(true_biomass))
 ## confirm that we have a record for each spp  (did not sample an NA cell)
 sample_raw %>% group_by(species) %>% summarise(sum(!is.na(true_biomass)))
 nrow(sample_raw)/nrow(biomass) <= n_stations/n_cells ## should return correct ratio of data
-
-sample_raw %>% group_by(species,timestep) %>% summarise(n=n())
+write.csv(sample_raw, here('data','sampler_raw.csv'))
+sample_raw %>% group_by(species,timestep) %>% summarise(n=n()) 
 
 sampler_results <- merge(sample_raw %>%
 group_by(species, timestep) %>%
@@ -145,43 +152,43 @@ mutate(true_mean_rescale =  rescale(true_mean, to=c(0,1)),
 sim_mean_rescale =  rescale(sim_mean, to=c(0,1)),
 true_cv_rescale =  rescale(true_cv, to=c(0,1)),
 sim_cv_rescale =  rescale(sim_cv, to=c(0,1))) %>%
-ungroup()
+ungroup() 
 
 
 
-## Population vs Observations, with error
+## Population vs Observations, with error 
 rawobs <- ggplot(sampler_results, aes(x = timestep)) +
-theme_minimal() +
+theme_minimal() + 
 #geom_line(aes(y = true_mean, color = 'Population')) +
 geom_point(aes(y = sim_mean, color = 'Observed')) +
 scale_color_manual(values = c('grey22','indianred')) +
 geom_errorbar(aes(ymin = true_mean-true_mean*true_cv,
  ymax = true_mean+true_mean*true_cv,color = 'Population'), width = 0) +
-geom_errorbar(aes(ymin = sim_mean-sim_mean*sim_cv,
+geom_errorbar(aes(ymin = sim_mean-sim_mean*sim_cv, 
 ymax = sim_mean+sim_mean*sim_cv,color = 'Observed'), width = 0) +
 annotate('rect', ymin =-Inf, ymax = Inf, xmin = 50, xmax = 55, alpha = 0.5, fill = '#B8DE29FF') +
 facet_wrap(~species, scales = 'free_y',labeller =  labeller(species = spp.labs), ncol = 1)
 
-
+write.csv(sampler_results, here('data','sampler_results.csv'))
 ## log scale
 ggplot(sampler_results, aes(x = timestep)) +
-theme_bw() +
+theme_bw() + 
 geom_line(aes(y = log(true_mean), color = 'Population')) +
 geom_point(aes(y = log(sim_mean), color = 'Observed')) +
 #geom_errorbar(aes(ymin = log(true_mean-true_mean*true_cv),
 # ymax = true_mean+true_mean*true_cv,color = 'Population'), width = 0) +
-#geom_errorbar(aes(ymin = sim_mean-sim_mean*sim_cv,
+#geom_errorbar(aes(ymin = sim_mean-sim_mean*sim_cv, 
 #ymax = sim_mean+sim_mean*sim_cv,color = 'Observed'), width = 0) +
 facet_wrap(~species, scales = 'free_y',labeller =  labeller(species = spp.labs))
 
 ## scaled to mean
 mre <- sampler_results %>%
 ggplot(., aes(x = timestep)) +
-theme_minimal() +
+theme_minimal() + 
 scale_color_manual(values = c('grey22','indianred')) +
 geom_line(aes(y = true_mean_rescale, color = 'Population')) +
 geom_point(aes(y =sim_mean_rescale, color = 'Observed')) +
-geom_errorbar(aes(ymin = sim_mean_rescale-sim_mean_rescale*sim_cv_rescale,
+geom_errorbar(aes(ymin = sim_mean_rescale-sim_mean_rescale*sim_cv_rescale, 
 ymax = sim_mean_rescale+sim_mean_rescale*sim_cv_rescale,color = 'Observed'), width = 0) +
 annotate('rect', ymin = 0, ymax = Inf, xmin = 50, xmax = 55, alpha = 0.5, fill = '#B8DE29FF') +
 facet_wrap(~species,labeller =  labeller(species = spp.labs), ncol = 1) +
@@ -199,7 +206,7 @@ height = 12, width = 12, unit = 'in',dpi = 520)
 mutate(sim_lower_rescale =sim_mean_rescale-sim_mean_rescale*sim_cv_rescale,
  sim_upper_rescale =sim_mean_rescale+sim_mean_rescale*sim_cv_rescale) %>%
 ggplot(., aes(x = timestep)) +
-theme_bw() +
+theme_bw() + 
 scale_color_manual(values = c('grey22','indianred')) +
 geom_line(aes(y = (sim_mean_rescale-true_mean_rescale)/true_mean_rescale, color = 'Population')) +
 geom_ribbon(aes(ymin = (sim_lower_rescale-true_mean_rescale)/true_mean_rescale,
@@ -224,6 +231,10 @@ dev.off()
 ## age comps ----
 nc_path <- here::here('data','ns_spatial_abundancebyAge_Simu0_withF',
 'ns_spatial_abundancebyAge-Whiting_Simu0.nc')
+
+nc_path <- here::here('data','ns_spatial_abundancebyAge_Simu0_withF',
+'ns_spatial_abundancebyAge-Hake_Simu0.nc')
+
 ncin <- nc_open(nc_path)
 
 abundance0 <- ncvar_get(ncin,"abundance")
