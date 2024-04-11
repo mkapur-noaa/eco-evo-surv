@@ -57,6 +57,7 @@ results_age <- results_index <- list()
 
 # For each timestep
 for (timestep in unique(abundance$year)) {
+    if(timestep %%2!=0) next ## only even years
   cat(timestep,"\n")
   # Filter the data for the current timestep
   timestep_data <- abundance[abundance$year == timestep, ]
@@ -87,6 +88,8 @@ results_index[[paste(timestep)]] <- survey_abund
     # Filter the data for the current cell (all ages present in population)
     cell_data <- timestep_data[timestep_data$long == selected_cells$long[i] & 
                                timestep_data$lat == selected_cells$lat[i], ]
+
+     if(all(is.na(cell_data$value))) next ## skip if no data                    
     # Perform the age sampling and store the results
   results_age[[paste(timestep, selected_cells$long[i], selected_cells$lat[i], sep = "_")]] <- 
       sample_ages(cell_data, timestep, long = selected_cells$long[i], lat = selected_cells$lat[i])
@@ -113,8 +116,7 @@ survey_results <- results_df_index %>%
 mutate(abund_mean= abund_mean/units_scalar)%>%
 select(year, abund_mean, abund_cv) %>%
 merge(., results_df_age %>% mutate(count = count/units_scalar) %>% tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
-mutate(inputN = 50) %>%
-filter(year %%2 ==0)
+mutate(inputN = 50)
 
 # save the results
 write.csv(survey_results,  
@@ -154,7 +156,7 @@ geom_point()+
 #geom_line(data = true_abund, color = 'red')+
 geom_errorbar(aes(ymin = abund_mean - abund_cv*abund_mean, 
 ymax = abund_mean + abund_cv*abund_mean), width = 0) +
-scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 5))+
+scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
 labs(x = 'Year', y = paste0('Abundance ',
 ifelse(units == 'numbers','(millions)','(tons)'))) 
 
@@ -187,21 +189,8 @@ file=here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',
 scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
 height = 4, width = 8, unit = 'in',dpi = 520)
 
+cat('Built data and summary figures for',paste0(sppLabs2[sppIdx,2],
+' ',scenLabs2[scenario,2],' replicate ',
+repID))
 
-
-# Calculate the frequency for each age group within each unique timestep
-
-
-
-
-## biomass
-## plot map of biomass
-## plot raw survey data
-## age comps
-
-
-  ## load the data
-  #load(here::here('data','evosmose_outputs',paste0('evosmose_',scenario,'.RData')))
-  #load(here::here('data','evosmose_outputs',paste0('evosmose_',scenario,'_catch.RData')))
-  #load(here::here('data','evosmose_outputs',paste0('evosmose_',scenario,'_biomass.RData')))
 }
