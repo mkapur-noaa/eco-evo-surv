@@ -15,7 +15,11 @@ library(scales)
 library(foreach)
 library(doParallel)
 library(testthat)
+# remotes::install_github("cararthompson/monochromeR"
+library(monochromeR)
+
 theme_set(ggsidekick::theme_sleek())
+options(dplyr.summarise.inform = FALSE)
 
 ## definitions and labels
 scenLabs <-  c('No Climate Change & No Evolution',
@@ -37,4 +41,5 @@ sppLabs2 <- cbind(Var1 = sppLabs, Var2=names(sppLabs), Var3 = 0:(length(sppLabs)
 ## color palettes
 scenPal <- c('#d8a6a6','#a00000','#9fc8c8','#298c8c') ## four scenario colors: reds have climate change, blues do not
 sppPal <- gplots::rich.colors(n = 13)
+yearPal <-
 
