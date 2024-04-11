@@ -14,9 +14,9 @@
 ## units_scalar: optional factor to decrease the scale of the index data (applies to comps as well)
 
 
-build_Data<-function(scenario = 1, 
-sppIdx = 8,
- replicate = 1,
+build_Data<-function(scenario, 
+sppIdx,
+ repuse = 1,
  yrs_use = 2010:2099, 
  obs_error = 0.2, ## whether or not survey biomass has observation error
  units = 'numbers',
@@ -31,7 +31,7 @@ yield_files <- list.files(dirtmp, pattern = 'ns_yield*', recursive = T, full.nam
 units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
 age_spatial_path <- list.files(dirtmp, pattern = paste0('spatial_',units_use,'byAge-',sppLabs2[sppIdx,2]), recursive = T,
- full.names = TRUE)[replicate]
+ full.names = TRUE)[repuse]
 repID <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
 abundance0 <- ncvar_get(nc_open(age_spatial_path),"abundance") ## this might need to switch with units_use
@@ -180,11 +180,6 @@ Rmisc::multiplot(map, index, comps, cols = 3)
 
 dev.off()
 
-
-ggsave(last_plot(),
-file=here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',
-scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
-height = 4, width = 8, unit = 'in',dpi = 520)
 
 cat('Built data and summary figures for',paste0(sppLabs2[sppIdx,2],
 ' ',scenLabs2[scenario,2],' replicate ',
