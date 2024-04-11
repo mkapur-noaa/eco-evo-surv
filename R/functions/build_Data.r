@@ -101,9 +101,6 @@ results_index[[paste(timestep)]] <- survey_abund
 results_df_age_spatial <- do.call(rbind, results_age)
 results_df_index <- do.call(rbind, results_index)
 
-# reduce the scale of the index data 
-results_df_index[1:2,] <- round(results_df_index[1:2,],2)
-
 # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
 results_df_age <- results_df_age_spatial %>%
   group_by(timestep, age) %>%
