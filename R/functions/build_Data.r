@@ -113,7 +113,8 @@ survey_results <- results_df_index %>%
 mutate(abund_mean= abund_mean/units_scalar)%>%
 select(year, abund_mean, abund_cv) %>%
 merge(., results_df_age %>% mutate(count = count/units_scalar) %>% tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
-mutate(inputN = 50) 
+mutate(inputN = 50) %>%
+filter(year %%2 ==0)
 
 # save the results
 write.csv(survey_results,  
