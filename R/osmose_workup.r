@@ -9,6 +9,13 @@ library(dplyr)
 library(here)
 library(ggplot2)
 library(scales)
+
+scenPal <- c('#d8a6a6','#a00000','#9fc8c8','#298c8c') ## scenario colors: reds have climate change, blues do not
+scenLabs <- c('No Climate Change, No Evolution',
+'No Climate Change, Evolution',
+'Climate Change, No Evolution',
+'Climate Change, Evolution')
+
 #spp_of_interest <- c(0,1,3,5,8,11,13) 
 spp_of_interest <- c(8,11,0,3)
 spp_of_interest_idx <- spp_of_interest+1 ## for indexing into arrays
@@ -232,16 +239,29 @@ dev.off()
 nc_path <- here::here('data','ns_spatial_abundancebyAge_Simu0_withF',
 'ns_spatial_abundancebyAge-Whiting_Simu0.nc')
 
-nc_path <- here::here('data','ns_spatial_abundancebyAge_Simu0_withF',
-'ns_spatial_abundancebyAge-Hake_Simu0.nc')
+nc_path <- here::here('data','ev-osmose outputs','ev-osmose_cc_evo','output','spatial',
+'ns_spatial_abundancebyAge-AtlanticCod_Simu0.nc')
+
+nc_path <- here::here('data','ev-osmose outputs','ev-osmose_noCC_noEvo','output','spatial',
+'ns_spatial_abundancebyAge-AtlanticCod_Simu0.nc')
 
 ncin <- nc_open(nc_path)
 
 abundance0 <- ncvar_get(ncin,"abundance")
-abundance <- reshape2::melt(abundance0) ## this is age (26) lat (25) lon (52) time (24 currently)
-names(abundance) <- c('long','lat','age','timestep','value')
+## this is age (26) lat (25) lon (52) timestep (24/year 2010-2099)
+## redefine the timesteps into real year, week
+## and then only take out the July populations
+abundance <- reshape2::melt(abundance0) %>%
+  mutate(year = 2010 + (Var4 - 1) %/% 24,
+    month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
+    select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+    filter(month == 7) %>%
+    group_by(year, age, lat, long, month) %>%
+    summarise(value = mean(value)) %>% ## average over the month
+    ungroup() %>%
+    select(-month)
+   
 head(abundance)
-
 
 # Define a function to perform the sampling
 sample_individuals <- function(df, timestep, long, lat) {
@@ -280,9 +300,10 @@ spatial_cells <- spatial_cells[!apply(spatial_cells, 1, function(cell) {
 results <- list()
 
 # For each timestep
-for (timestep in unique(abundance$timestep)) {
+for (timestep in unique(abundance$year)) {
+  cat(timestep,"\n")
   # Filter the data for the current timestep
-  timestep_data <- abundance[abundance$timestep == timestep, ]
+  timestep_data <- abundance[abundance$year == timestep, ]
   
   # Randomly select 50% of the spatial cells
   selected_cells <- spatial_cells[sample(nrow(spatial_cells), nrow(spatial_cells) / 2), ]
@@ -312,6 +333,8 @@ results_df <- results_df %>%
   group_by(timestep) %>%
   mutate(frequency = count / sum(count))
 
+
+results_df %>% filter(age == 3)
 # Create a new column for the cell identifier
 #results_df$cell <- rownames(results_df)
 #results_df$cell <- interaction(results_df$lat, results_df$long, sep = "_")
@@ -323,9 +346,17 @@ results_df <- results_df %>%
 #results_df %>% group_by(timestep, cell) %>% summarise(n = n())
 
 # Create the plot
-ggplot(results_df, aes(x = age, y = frequency)) +
+ggplot(results_df_2, 
+aes(x = age, y = frequency, color = timestep, group = timestep)) +
   geom_line() +
-  facet_wrap(~ timestep) +
+  #facet_wrap(~ timestep) +
+  labs(x = "Age", y = "Frequency") +
+  theme_minimal()+  theme(legend.position='none')
+
+ggplot(results_df_1, 
+aes(x = age, y = frequency, color = timestep, group = timestep)) +
+  geom_line() +
+  #facet_wrap(~ timestep) +
   labs(x = "Age", y = "Frequency") +
   theme_minimal()+  theme(legend.position='none')
 
@@ -348,4 +379,39 @@ geom_point()+geom_line() +
 facet_wrap(~timestep)
 
 
+biom <- list.files(here::here('data','ev-osmose outputs'), 
+pattern = "biomass_Simu0.csv", recursive = TRUE, full.names = TRUE)
+basename(dirname(dirname(biom)))
 
+dat2 <- lapply(biom, function(x) {
+  dat <- read.csv(x, skip = 1) %>%
+  mutate(
+         year = 2010 + floor(Time-70.04166),   # Adjust the Time so that 0 corresponds to January 1
+         month =cut(Time %% 1, breaks = seq(0, 1, 1/12), 
+         labels = 1:12, include.lowest = TRUE),
+         scenario = basename(dirname(dirname(x))))
+
+
+  #dat$species <- gsub('biomass_Simu0.csv','',x)
+  return(dat)
+}) %>% bind_rows()  
+
+## plot average annual biomass
+dat2 %>%
+select(-Time) %>%
+reshape2::melt(id = c('year','month','scenario')) %>% 
+filter(!is.na(value)) %>%
+group_by(year, variable, scenario) %>%
+summarise(sd_v = sd(value),  mvalue = mean(value), 
+lci = mvalue -1.96*sd_v, uci = mvalue+1.96*sd_v) %>% 
+#filter(variable %in% c('NorwayPout','AtlanticHerring','AtlanticCod','AtlanticMackerel','EuropeanSprat')) %>%
+ggplot(., aes(x = year, y = mvalue, color = scenario)) +
+geom_line() +
+#geom_ribbon(aes(ymin = lci, ymax = uci), alpha = 0.2, color = NA) +
+scale_color_manual(values = scenPal)+
+facet_wrap(~variable, scales = 'free_y') +
+ggsidekick::theme_sleek() +
+labs(x = 'Year', y = 'Mean Biomass (t)') 
+
+ggsave(last_plot(),file=here('figs','scenario_compare_biomass.png'),
+height = 12, width = 12, unit = 'in',dpi = 520)
