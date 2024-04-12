@@ -28,7 +28,7 @@ scenLabs <-  c('No Climate Change & No Evolution',
 'Climate Change & Evolution')
 names(scenLabs) <- c('noCC_noEvo','noCC_Evo','CC_noEvo','CC_Evo')
 
-scenLabs2 <- cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4)
+
 
 sppLabs <-c("Atlantic Herring" , "Atlantic Mackerel" ,"Sandeel" ,"European Sprat","Norway Pout" ,
 "European Plaice","Common Sole","Saithe","Atlantic Cod","Haddock","Horse Mackerel" ,
@@ -39,7 +39,10 @@ sppLabs2 <- cbind(Var1 = sppLabs, Var2=names(sppLabs), Var3 = 0:(length(sppLabs)
 
 
 ## color palettes
-scenPal <- c('#d8a6a6','#a00000','#9fc8c8','#298c8c') ## four scenario colors: reds have climate change, blues do not
+scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: reds have climate change, blues do not
+scenLabs2 <- cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal))
 sppPal <- gplots::rich.colors(n = 13)
-yearPal <-
+
+survey_array <- build_survey_array(fractional_coverage = 0.5)
+
 
