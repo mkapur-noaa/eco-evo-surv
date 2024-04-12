@@ -31,10 +31,10 @@ sample_ages <- function(df, timestep, long, lat) {
   df <- df[!is.na(df$value), ]
 
 # If there are no positive values, return a data frame with zero counts for all age groups
-  if (all(df$value <= 0) | nrow(df) == 0){
-    return(data.frame(timestep = timestep, long = long, lat = lat, 
-    age = 1:26, count =0))
-  }
+  #if (all(df$value <= 0) | nrow(df) == 0){
+  #  return(data.frame(timestep = timestep, long = long, lat = lat, 
+  #  age = 1:26, count =0))
+  #}
   # Calculate the proportions of each age group
   props <- df$value / sum(df$value)
   
@@ -52,3 +52,4 @@ sample_ages <- function(df, timestep, long, lat) {
   return(result)
     #return(data.frame(timestep = timestep, long = long, lat = lat, age = df$age, count = result))
 }
+
