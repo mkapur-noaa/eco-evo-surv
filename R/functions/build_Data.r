@@ -52,12 +52,13 @@ abundance <- reshape2::melt(abundance0) %>%
 total_area <- length(unique(abundance$lat))*length(unique(abundance$long))
 
 
+
 # Initialize an empty list to store the results
 results_age <- results_index <- list()
 
 # For each timestep
 for (timestep in unique(abundance$year)) {
-    if(timestep %%2!=0) next ## only even years
+  if(timestep %%2!=0) next ## only even years
   cat(timestep,"\n")
   # Filter the data for the current timestep
   timestep_data <- abundance[abundance$year == timestep, ]
@@ -83,6 +84,7 @@ mutate(year = timestep, replicate = repID, scenario = scenario, species = sppLab
 results_index[[paste(timestep)]] <- survey_abund
 
 
+
 ## perform multinomial sampling of ages at each station
   for (i in 1:nrow(selected_cells)) {
     # Filter the data for the current cell (all ages present in population)
@@ -98,7 +100,15 @@ results_index[[paste(timestep)]] <- survey_abund
 } ## end timesteps loop for survey data
 
 # Combine the results into a single data frame
-results_df_age_spatial <- do.call(rbind, results_age)
+# define maximum age above which all entries are NA
+max_age <- abundance %>%
+  group_by(age) %>%
+  #summarise(mean(value, na.RM = TRUE)) %>% tail(10)
+  summarise(all_zero = all(value == 0)) %>% 
+  filter(!is.na(all_zero)) %>%
+  summarise(max_age = max(age))
+
+results_df_age_spatial <- do.call(rbind, results_age) %>% filter(age <= as.numeric(max_age))
 results_df_index <- do.call(rbind, results_index)
 
 # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
@@ -147,14 +157,20 @@ group_by(year) %>%
 summarise(abund_mean=sum(value,na.rm = T)/units_scalar) %>% 
 ungroup()
 
+true_b <- ggplot(true_abund, aes(x = year, y = abund_mean)) +
+geom_line(color = scenLabs2[scenario,'Pal'])+
+scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
+labs(x = 'Year', y = paste0('True Abundance ',
+ifelse(units == 'numbers','(millions)','(tons)'))) 
+
 
 index <- ggplot(survey_results, aes(x = year, y = abund_mean)) +
-geom_point()+
+geom_point(color = scenLabs2[scenario,'Pal'])+
 #geom_line(data = true_abund, color = 'red')+
 geom_errorbar(aes(ymin = abund_mean - abund_cv*abund_mean, 
-ymax = abund_mean + abund_cv*abund_mean), width = 0) +
+ymax = abund_mean + abund_cv*abund_mean), width = 0, color = scenLabs2[scenario,'Pal']) +
 scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
-labs(x = 'Year', y = paste0('Abundance ',
+labs(x = 'Year', y = paste0('Survey Abundance ',
 ifelse(units == 'numbers','(millions)','(tons)'))) 
 
 ## survey age comps
@@ -166,7 +182,7 @@ ggplot(., aes(x = age, y = frequency, group = year, color = factor(year))) +
 geom_line()+ 
 scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 5))+
 labs(x = 'Age', y = 'Frequency', color = 'Year') + 
-scale_color_manual(values =  monochromeR::generate_palette("purple", modification = "go_lighter", 
+scale_color_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'], modification = "go_lighter", 
                  n_colours = length(yrs_use), view_palette = TRUE))+
 theme(legend.position = 'none')
 
@@ -175,8 +191,8 @@ theme(legend.position = 'none')
 png(file = here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',
 scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
 height = 8, width = 12, unit = 'in',res = 520)
-
-Rmisc::multiplot(map, index, comps, cols = 3)
+#Rmisc::multiplot(map, index, cols = 2)
+Rmisc::multiplot(map, index, true_b, cols = 3)
 
 dev.off()
 
