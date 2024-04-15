@@ -125,14 +125,15 @@ build_Data<-function(scenario,
 
 
   survey_results <- results_df_index %>%
-    mutate(abund_mean = round(abund_mean/units_scalar)) %>%
+    mutate(abund_mean = round(abund_mean/units_scalar),
+           abund_cv = round(abund_cv,3)) %>%
     select(year, abund_mean, abund_cv) %>%
     tidyr::complete(year = 2010:2099,
                     fill = list(abund_mean = -999,
                                 abund_sd  = -999,
                                 abund_cv  = -999)) %>%
     merge(., results_df_age %>%
-            mutate(count = count/units_scalar) %>%
+            mutate(count = round(count/units_scalar,4)) %>%
             tidyr::complete(year= 2010:2099, age = 1:max_age,
                             fill = list(count = -999) ) %>%
             tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
