@@ -107,23 +107,37 @@ build_Data<-function(scenario,
     summarise(all_zero = all(value == 0)) %>%
     filter(!is.na(all_zero)) %>%
     summarise(max_age = max(age))
+  max_age <- as.numeric(max_age)
 
-  results_df_age_spatial <- do.call(rbind, results_age) %>% filter(age <= as.numeric(max_age))
+  results_df_age_spatial <- do.call(rbind, results_age) %>% filter(age <= max_age)
   results_df_index <- do.call(rbind, results_index)
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
   results_df_age <- results_df_age_spatial %>%
     group_by(timestep, age) %>%
     summarise(count = sum(count)) %>%
-    select(year = timestep, age, count)
+    select(year = timestep, age, count) %>%
+    ungroup()
 
 
   # rescale, reshape to WHAM format and save
+  # fill missing years with -999
+
+
   survey_results <- results_df_index %>%
     mutate(abund_mean= abund_mean/units_scalar)%>%
     select(year, abund_mean, abund_cv) %>%
-    merge(., results_df_age %>% mutate(count = count/units_scalar) %>% tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
-    mutate(inputN = 50)
+    tidyr::complete(year = 2010:2099,
+                    fill = list(abund_mean = -999,
+                                abund_sd  = -999,
+                                abund_cv  = -999)) %>%
+    merge(., results_df_age %>%
+            mutate(count = count/units_scalar) %>%
+            tidyr::complete(year= 2010:2099, age = 1:max_age,
+                            fill = list(count = -999) ) %>%
+            tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
+    mutate(inputN = 50) %>%
+    arrange(year)
 
   # save the results
   write.csv(survey_results,
