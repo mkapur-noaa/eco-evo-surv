@@ -125,7 +125,7 @@ build_Data<-function(scenario,
 
 
   survey_results <- results_df_index %>%
-    mutate(abund_mean= abund_mean/units_scalar)%>%
+    mutate(abund_mean = round(abund_mean/units_scalar)) %>%
     select(year, abund_mean, abund_cv) %>%
     tidyr::complete(year = 2010:2099,
                     fill = list(abund_mean = -999,
