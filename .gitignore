@@ -4,3 +4,5 @@ MixFishSim/
 *figs*
 *data/*
 .Rproj.user
+.Rhistory
+.RDataTmp
