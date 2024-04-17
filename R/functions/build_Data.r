@@ -134,7 +134,9 @@ build_Data<-function(scenario,
     summarise(max_age = max(age))
   max_age <- as.numeric(max_age)
 
-  results_df_age_spatial <- do.call(rbind, results_age) %>% filter(age <= max_age)
+  results_df_age_spatial <- do.call(rbind, results_age) %>%
+    # filter(age <= max_age)
+    mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
   results_df_index <- do.call(rbind, results_index)
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
@@ -147,8 +149,6 @@ build_Data<-function(scenario,
 
   # rescale, reshape to WHAM format and save
   # fill missing years with -999
-
-
   survey_results <- results_df_index %>%
     mutate(abund_mean = round(abund_mean/units_scalar),
            abund_cv = round(abund_cv,3)) %>%
@@ -159,7 +159,8 @@ build_Data<-function(scenario,
                                 abund_cv  = -999)) %>%
     merge(., results_df_age %>%
             mutate(count = round(count/units_scalar,4)) %>%
-            tidyr::complete(year= 2010:2099, age = 1:max_age,
+            tidyr::complete(year= 2010:2099,
+                            age = 1:max_age,
                             fill = list(count = -999) ) %>%
             tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
     mutate(inputN = 50) %>%
@@ -173,45 +174,50 @@ build_Data<-function(scenario,
 
 
   ## summary figures
-
   ## maps of true biomass thru time
   map <- biomass %>%
     group_by(year, lat, long) %>%
     summarise(tot_val = sum(value)) %>%
     mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
     ungroup() %>%
-    filter(year %in% seq(2020,2095,length.out = 4))  %>%
+    filter(year == 2010) %>%
+    # filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
     ggplot(data = ., aes(x = lat, y = long,
                          fill = abundance_rescale))+
     theme_void()+
     geom_raster()+
+    geom_point(data = filter(survey_array, year == 2010), aes(fill =year))+
     scale_fill_viridis_c(na.value = NA)+
     theme(strip.text = element_text(size = 25),
           strip.text.y = element_blank(),
           legend.position = 'none')+
     facet_wrap(~year, ncol = 2)
 
+
+
   ## survey index data
   true_abund <- biomass %>%
     group_by(year) %>%
-    summarise(abund_mean=sum(value,na.rm = T)/units_scalar) %>%
-    ungroup()
+    summarise(abund_mean=sum(value,na.rm = T)) %>%
+    ungroup() %>%
+    mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)))
 
-  true_b <- ggplot(true_abund, aes(x = year, y = abund_mean)) +
+  true_b <- ggplot(true_abund, aes(x = year, y =abund_mean_rescale)) +
     geom_line(color = scenLabs2[scenario,'Pal'])+
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     labs(x = 'Year', y = paste0('True Abundance ',
                                 ifelse(units == 'numbers','(millions)','(tons)')))
 
 
-  index <- ggplot(survey_results, aes(x = year, y = abund_mean)) +
+  index <- ggplot(results_df_index %>%
+                    mutate(abund_mean_rescale = rescale(abund_mean, to = c(0,1))),
+                  aes(x = year, y = abund_mean_rescale)) +
     geom_point(color = scenLabs2[scenario,'Pal'])+
-    #geom_line(data = true_abund, color = 'red')+
-    geom_errorbar(aes(ymin = abund_mean - abund_cv*abund_mean,
-                      ymax = abund_mean + abund_cv*abund_mean), width = 0, color = scenLabs2[scenario,'Pal']) +
+    geom_line(data = true_abund, color = 'grey3')+
+    geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv*abund_mean_rescale,
+                      ymax = abund_mean_rescale + abund_cv*abund_mean_rescale), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
-    labs(x = 'Year', y = paste0('Survey Abundance ',
-                                ifelse(units == 'numbers','(millions)','(tons)')))
+    labs(x = 'Year', y = 'Biomass (rescaled)')
 
   ## survey age comps
   comps <- results_df_age %>%
@@ -232,7 +238,7 @@ build_Data<-function(scenario,
                                       scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
       height = 8, width = 12, unit = 'in',res = 520)
   #Rmisc::multiplot(map, index, cols = 2)
-  Rmisc::multiplot(map, index, true_b, cols = 3)
+  Rmisc::multiplot(map, index, cols = 2)
 
   dev.off()
 
