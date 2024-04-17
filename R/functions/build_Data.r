@@ -134,8 +134,6 @@ build_Data<-function(scenario,
   } ## end timesteps loop for survey data
 
   # Combine the results into a single data frame
-
-
   results_df_age_spatial <- do.call(rbind, results_age) %>%
     # filter(age <= max_age)
     mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
@@ -182,13 +180,15 @@ build_Data<-function(scenario,
     summarise(tot_val = sum(value)) %>%
     mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
     ungroup() %>%
-    filter(year == 2010) %>%
-    # filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
+    # filter(year == 2010) %>%
+    filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
     ggplot(data = ., aes(x = lat, y = long,
                          fill = abundance_rescale))+
     theme_void()+
     geom_raster()+
-    geom_point(data = filter(survey_array, year == 2010), aes(fill =year))+
+    geom_point(data = filter(survey_array, year %in% floor(seq(2020,max(biomass$year),length.out = 4))),
+          fill = NA,
+               color = 'red', shape = 4)+
     scale_fill_viridis_c(na.value = NA)+
     theme(strip.text = element_text(size = 25),
           strip.text.y = element_blank(),
@@ -216,8 +216,8 @@ build_Data<-function(scenario,
                   aes(x = year, y = abund_mean_rescale)) +
     geom_point(color = scenLabs2[scenario,'Pal'])+
     geom_line(data = true_abund, color = 'grey3')+
-    geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv*abund_mean_rescale,
-                      ymax = abund_mean_rescale + abund_cv*abund_mean_rescale), width = 0, color = scenLabs2[scenario,'Pal']) +
+    geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
+                      ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     labs(x = 'Year', y = 'Biomass (rescaled)')
 
