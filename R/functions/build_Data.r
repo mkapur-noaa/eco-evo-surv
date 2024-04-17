@@ -38,7 +38,7 @@ build_Data<-function(scenario,
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
     group_by(year) %>%
-    summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4))
+    summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4)) %>% ungroup()
 
   matrix(rep(mort_csv$Mrecruits, length(1:26)), byrow=FALSE, ncol = length(1:26)) %>%
     write.table(.,
@@ -53,13 +53,15 @@ build_Data<-function(scenario,
     filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
     mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
     group_by(year,Age) %>%
-    summarise(value = mean(value)) %>% ## average maturity across year
-    tidyr::complete(Age = 1:26,
+    summarise(value = round(mean(value),3)) %>% ## average maturity across year
+    ungroup() %>%
+    tidyr::complete(year = 2010:2099, Age = 1:26,
                     fill = list(value = 1)) %>%
     tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
+    select(-year) %>%
     write.table(.,
                 sep = ' ',
-                here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_maturity.csv')),
+                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_maturity.csv'),
                 row.names = FALSE)
 
 
