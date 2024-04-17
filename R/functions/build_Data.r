@@ -26,6 +26,29 @@ build_Data<-function(scenario,
   # dirtmp <- here::here('F','Ev-OSMOSE outputs_15April2024',paste0('Ev-osmose_',scenLabs2[scenario,2]),'output')
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scenLabs2[scenario,2],'/output')
 
+  ## mortality (year x age)
+  readLines(mort_path,n=2,skip = 1)
+  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',sppLabs2[sppIdx,2],"_Simu",repuse,".csv")
+  mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
+    mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
+    group_by(year) %>%
+    summarise(Frecruits = sum(V12), Mrecruits = sum(V18))
+
+  matrix(rep(mort_csv$Mrecruits, length(1:26)), byrow=FALSE, ncol = length(1:26)) %>%
+    write.table(.,
+                sep = ' ',
+                here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_mortality.csv')),
+                row.names = FALSE)
+  # mort_csv %>%
+  #   select(-Frecruits) %>%
+    # tidyr::complete(year = 2010:2099,
+    #                 age = 1:26) %>%
+    # tidyr::pivot_wider(., id_cols = year, names_from = )
+
+  ## maturity (year x age)
+  ## WAA matrices (catch, discards (unused), ssb)
+
+
   ## strip and format catches (yr x Age)
   yield_files <- list.files(dirtmp, pattern = 'ns_yield*', recursive = T, full.names = TRUE)
 
@@ -170,7 +193,7 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-            here::here('data','wham_inputs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_survey.csv')),
+            here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_survey.csv')),
             row.names = FALSE)
 
 
