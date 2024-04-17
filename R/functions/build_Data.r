@@ -62,6 +62,15 @@ build_Data<-function(scenario,
     ungroup() %>%
     select(-month)
 
+  # define maximum age above which all entries are NA
+  max_age <- abundance %>%
+    group_by(age) %>%
+    #summarise(mean(value, na.RM = TRUE)) %>% tail(10)
+    summarise(all_zero = all(value == 0)) %>%
+    filter(!is.na(all_zero)) %>%
+    summarise(max_age = max(age))
+  max_age <- as.numeric(max_age)
+
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long))
 
   biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass") ## this might need to switch with units_use
@@ -125,14 +134,7 @@ build_Data<-function(scenario,
   } ## end timesteps loop for survey data
 
   # Combine the results into a single data frame
-  # define maximum age above which all entries are NA
-  max_age <- abundance %>%
-    group_by(age) %>%
-    #summarise(mean(value, na.RM = TRUE)) %>% tail(10)
-    summarise(all_zero = all(value == 0)) %>%
-    filter(!is.na(all_zero)) %>%
-    summarise(max_age = max(age))
-  max_age <- as.numeric(max_age)
+
 
   results_df_age_spatial <- do.call(rbind, results_age) %>%
     # filter(age <= max_age)
