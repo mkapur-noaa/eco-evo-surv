@@ -23,29 +23,46 @@ build_Data<-function(scenario,
                      units = 'numbers',
                      units_scalar = 1e6){
 
-  # dirtmp <- here::here('F','Ev-OSMOSE outputs_15April2024',paste0('Ev-osmose_',scenLabs2[scenario,2]),'output')
+  ## where the raw evOsmose outputs are stored
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scenLabs2[scenario,2],'/output')
 
-  ## mortality (year x age)
+  ## where the WHAM outputs are to be stored
+  wham.dir <- here::here('outputs','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],"-",Sys.Date()))
+  if(!dir.exists(wham.dir)) dir.create(wham.dir)
+  # setwd(wham.dir)
+
+  ## mortality (year x age) ----
+  ## don't have age-specific values so keep same
   readLines(mort_path,n=2,skip = 1)
   mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',sppLabs2[sppIdx,2],"_Simu",repuse,".csv")
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
     group_by(year) %>%
-    summarise(Frecruits = sum(V12), Mrecruits = sum(V18))
+    summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4))
 
   matrix(rep(mort_csv$Mrecruits, length(1:26)), byrow=FALSE, ncol = length(1:26)) %>%
     write.table(.,
                 sep = ' ',
-                here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_mortality.csv')),
+                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_mortality.csv'),
                 row.names = FALSE)
-  # mort_csv %>%
-  #   select(-Frecruits) %>%
-    # tidyr::complete(year = 2010:2099,
-    #                 age = 1:26) %>%
-    # tidyr::pivot_wider(., id_cols = year, names_from = )
 
-  ## maturity (year x age)
+  ## maturity (year x age) ----
+  mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repuse,".csv")
+  read.csv(mat_path, skip = 1, header = T) %>%
+    reshape2::melt(id = c('Time','Age')) %>%
+    filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+    mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
+    group_by(year,Age) %>%
+    summarise(value = mean(value)) %>% ## average maturity across year
+    tidyr::complete(Age = 1:26,
+                    fill = list(value = 1)) %>%
+    tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
+    write.table(.,
+                sep = ' ',
+                here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_maturity.csv')),
+                row.names = FALSE)
+
+
   ## WAA matrices (catch, discards (unused), ssb)
 
 
