@@ -109,15 +109,14 @@ build_Data<-function(scenario,
 
     results_index[[paste(timestep)]] <- survey_biomass
 
-
-
-    ## perform multinomial sampling of ages at each station
+    ## perform multinomial sampling of ages at each station, given selex
     for (i in 1:nrow(selected_cells)) {
       # Filter the data for the current cell (all ages present in population)
-      cell_data <- timestep_data[timestep_data$long == selected_cells$long[i] &
-                                   timestep_data$lat == selected_cells$lat[i], ]
+      cell_data <- timestep_data_age[timestep_data_age$long == selected_cells$long[i] &
+                                   timestep_data_age$lat == selected_cells$lat[i], ]
 
       if(all(is.na(cell_data$value))) next ## skip if no data
+      # cat(i,"\n")
       # Perform the age sampling and store the results
       results_age[[paste(timestep, selected_cells$long[i], selected_cells$lat[i], sep = "_")]] <-
         sample_ages(cell_data, timestep, long = selected_cells$long[i], lat = selected_cells$lat[i])
