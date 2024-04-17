@@ -18,6 +18,7 @@ build_Data<-function(scenario,
                      sppIdx,
                      repuse = 1,
                      yrs_use = 2010:2099,
+                     srv_selex = 8, ## whether or not there is survey selex (logistic with A50=8)
                      obs_error = 0.2, ## whether or not survey biomass has observation error
                      units = 'numbers',
                      units_scalar = 1e6){
@@ -28,11 +29,21 @@ build_Data<-function(scenario,
   ## strip and format catches (yr x Age)
   yield_files <- list.files(dirtmp, pattern = 'ns_yield*', recursive = T, full.names = TRUE)
 
+  ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
   ## need numbers ('abundance') for ages, biomass for indices
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
-  age_spatial_path <- list.files(dirtmp, pattern = paste0('spatial_',units_use,'byAge-',sppLabs2[sppIdx,2]), recursive = T,
+  survey_selex <- if(is.null(srv_selex)) {rep(1,26)} else { 1/(1+exp(-log(19)*((1:26)-srv_selex)/(15-srv_selex)))}
+  survey_selex <- cbind(age = 1:26, slx = survey_selex)
+
+  age_spatial_path <- list.files(dirtmp,
+                                 pattern = paste0('spatial_abundancebyAge-',sppLabs2[sppIdx,2]),
+                                 recursive = T,
+                                 full.names = TRUE)[repuse]
+  biom_spatial_path <- list.files(dirtmp,
+                                 pattern = paste0('spatial_biomassbyAge-',sppLabs2[sppIdx,2]),
+                                 recursive = T,
                                  full.names = TRUE)[repuse]
 
   repID <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
@@ -51,9 +62,18 @@ build_Data<-function(scenario,
     ungroup() %>%
     select(-month)
 
-
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long))
 
+  biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass") ## this might need to switch with units_use
+  biomass <- reshape2::melt(biomass0) %>%
+    mutate(year = 2010 + (Var4 - 1) %/% 24,
+           month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
+    select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+    filter(month == 7 & year %in% yrs_use) %>%
+    group_by(year, age, lat, long, month) %>%
+    summarise(value = mean(value)) %>% ## average over the month
+    ungroup() %>%
+    select(-month)
 
 
   # Initialize an empty list to store the results
@@ -63,20 +83,23 @@ build_Data<-function(scenario,
   for (timestep in unique(abundance$year)) {
     if(timestep %%2!=0) next ## only even years
     cat(timestep,"\n")
-    # Filter the data for the current timestep
-    timestep_data <- abundance[abundance$year == timestep, ]
-
     # pull out the survey stations for this year
     selected_cells <- survey_array[survey_array$year == timestep, ]
 
+    ## age comps (numbers)
+    # Filter the data for the current timestep
+    timestep_data_age <- abundance[abundance$year == timestep, ]
+    timestep_data_biom <- biomass[biomass$year == timestep, ]
+
+    ## survey indices
     # expand the mean and sd of the abundance for the selected cells
-    # this approach has NO survey selectivity
-    survey_abund <- semi_join(timestep_data, selected_cells, by = c("lat", "long")) %>%
+    survey_biomass <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
       filter(!is.na(value)) %>% ## remove NAs
+      merge(., survey_selex, by = 'age') %>%
       group_by(lat, long) %>%
       summarise(station_abund = ifelse(is.null(obs_error),
-                                       sum(value),
-                                       rnorm(1,sum(value),obs_error*mean(value)))) %>% ## sum over all ages
+                                       sum(value*slx),
+                                       rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
       ungroup() %>%
       summarise(
         abund_mean = mean(station_abund)*total_area,
@@ -84,7 +107,7 @@ build_Data<-function(scenario,
         abund_cv = abund_sd/abund_mean ) %>%
       mutate(year = timestep, replicate = repID, scenario = scenario, species = sppLabs2[sppIdx,2])
 
-    results_index[[paste(timestep)]] <- survey_abund
+    results_index[[paste(timestep)]] <- survey_biomass
 
 
 
@@ -152,13 +175,13 @@ build_Data<-function(scenario,
 
   ## summary figures
 
-  ## maps of true abundance thru time
-  map <- abundance %>%
+  ## maps of true biomass thru time
+  map <- biomass %>%
     group_by(year, lat, long) %>%
     summarise(tot_val = sum(value)) %>%
     mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
     ungroup() %>%
-    filter(year %in% seq(2015,2075,length.out = 4))  %>%
+    filter(year %in% seq(2020,2095,length.out = 4))  %>%
     ggplot(data = ., aes(x = lat, y = long,
                          fill = abundance_rescale))+
     theme_void()+
@@ -169,9 +192,8 @@ build_Data<-function(scenario,
           legend.position = 'none')+
     facet_wrap(~year, ncol = 2)
 
-
   ## survey index data
-  true_abund <- abundance %>%
+  true_abund <- biomass %>%
     group_by(year) %>%
     summarise(abund_mean=sum(value,na.rm = T)/units_scalar) %>%
     ungroup()
