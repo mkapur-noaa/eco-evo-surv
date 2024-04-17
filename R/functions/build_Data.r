@@ -22,16 +22,19 @@ build_Data<-function(scenario,
                      units = 'numbers',
                      units_scalar = 1e6){
 
-  dirtmp <- here::here('data','Ev-OSMOSE outputs',paste0('Ev-osmose_',scenLabs2[scenario,2]),'output')
+  # dirtmp <- here::here('F','Ev-OSMOSE outputs_15April2024',paste0('Ev-osmose_',scenLabs2[scenario,2]),'output')
+  dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scenLabs2[scenario,2],'/output')
 
   ## strip and format catches (yr x Age)
   yield_files <- list.files(dirtmp, pattern = 'ns_yield*', recursive = T, full.names = TRUE)
 
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
-  units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
+  ## need numbers ('abundance') for ages, biomass for indices
+  # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
   age_spatial_path <- list.files(dirtmp, pattern = paste0('spatial_',units_use,'byAge-',sppLabs2[sppIdx,2]), recursive = T,
                                  full.names = TRUE)[repuse]
+
   repID <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
   abundance0 <- ncvar_get(nc_open(age_spatial_path),"abundance") ## this might need to switch with units_use
@@ -141,7 +144,8 @@ build_Data<-function(scenario,
     arrange(year)
 
   # save the results
-  write.csv(survey_results,
+  write.table(survey_results,
+              sep = ' ',
             here::here('data','wham_inputs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_survey.csv')),
             row.names = FALSE)
 
