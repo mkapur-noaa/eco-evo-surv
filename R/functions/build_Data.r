@@ -50,9 +50,10 @@ build_Data<-function(scenario,
 
   abundance0 <- ncvar_get(nc_open(age_spatial_path),"abundance") ## this might need to switch with units_use
   ## this is age (26) lat (25) lon (52) timestep (24/year 2010-2099)
-  ## redefine the timesteps into real year, week
+  ## redefine the timesteps into real year, week, and not NA
   ## and then only take out the July populations
   abundance <- reshape2::melt(abundance0) %>%
+    filter(!is.na(value)) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
     select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
@@ -75,6 +76,7 @@ build_Data<-function(scenario,
 
   biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass") ## this might need to switch with units_use
   biomass <- reshape2::melt(biomass0) %>%
+    filter(!is.na(value)) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
     select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
@@ -135,10 +137,8 @@ build_Data<-function(scenario,
 
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
-    # filter(age <= max_age)
-    mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
-  results_df_index <- do.call(rbind, results_index)
-
+    filter(age <= max_age)
+    # mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
   results_df_age <- results_df_age_spatial %>%
     group_by(timestep, age) %>%
@@ -146,6 +146,7 @@ build_Data<-function(scenario,
     select(year = timestep, age, count) %>%
     ungroup()
 
+  results_df_index <- do.call(rbind, results_index)
 
   # rescale, reshape to WHAM format and save
   # fill missing years with -999
@@ -160,7 +161,7 @@ build_Data<-function(scenario,
     merge(., results_df_age %>%
             mutate(count = round(count/units_scalar,4)) %>%
             tidyr::complete(year= 2010:2099,
-                            age = 1:max_age,
+                            age = 1:26,
                             fill = list(count = -999) ) %>%
             tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
     mutate(inputN = 50) %>%
@@ -180,7 +181,6 @@ build_Data<-function(scenario,
     summarise(tot_val = sum(value)) %>%
     mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
     ungroup() %>%
-    # filter(year == 2010) %>%
     filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
     ggplot(data = ., aes(x = lat, y = long,
                          fill = abundance_rescale))+
@@ -194,8 +194,6 @@ build_Data<-function(scenario,
           strip.text.y = element_blank(),
           legend.position = 'none')+
     facet_wrap(~year, ncol = 2)
-
-
 
   ## survey index data
   true_abund <- biomass %>%
@@ -219,28 +217,40 @@ build_Data<-function(scenario,
     geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
                       ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
-    labs(x = 'Year', y = 'Biomass (rescaled)')
+    labs(x = 'Year', y = 'Biomass (rescaled)', title = 'Survey Index')
 
   ## survey age comps
   comps <- results_df_age %>%
     group_by(year) %>%
     mutate(frequency = count / sum(count)) %>%
     ungroup() %>%
-    ggplot(., aes(x = age, y = frequency, group = year, color = factor(year))) +
-    geom_line()+
-    scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 5))+
-    labs(x = 'Age', y = 'Frequency', color = 'Year') +
-    scale_color_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'], modification = "go_lighter",
-                                                               n_colours = length(yrs_use), view_palette = TRUE))+
-    theme(legend.position = 'none')
+    ggplot(.) +
+    geom_area(alpha =0.4,
+                 aes(x = age, y = frequency,
+                     group = factor(year),
+                     fill = factor(year), color = factor(year)))+
+    # geom_bar(aes(x = age, y = frequency, group = factor(year), color = factor(year)),stat = 'identity')+
+    scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 2))+
+    labs(x = 'Age', y = 'Frequency', color = 'Year', title = 'Surveyed Age Comps') +
+    scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
+                                                               modification = "go_lighter",
+                                                               n_colours = length(unique(results_df_age$year)),
+                                                               view_palette = FALSE)) +
+    scale_color_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
+                                                               modification = "go_lighter",
+                                                               n_colours = length(unique(results_df_age$year)),
+                                                               view_palette = FALSE)) +
+    theme(legend.position = 'none') #+
+    # facet_grid(year~., scales = 'free') +
+    # theme(panel.spacing = unit(0.2, "lines"),)
 
 
 
   png(file = here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',
                                       scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
       height = 8, width = 12, unit = 'in',res = 520)
-  #Rmisc::multiplot(map, index, cols = 2)
-  Rmisc::multiplot(map, index, cols = 2)
+  Rmisc::multiplot(map, index, comps, cols = 3)
+  # Rmisc::multiplot(map, index, cols = 2)
 
   dev.off()
 
