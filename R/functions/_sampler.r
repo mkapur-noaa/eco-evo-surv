@@ -34,8 +34,8 @@ sample_ages <- function(df, timestep, long, lat) {
   # Calculate the proportions of each age group
   props <- df$value / sum(df$value)
 
-  # Sample 500 individuals using a multinomial distribution
-  sampled <- rmultinom(1, 500, props)
+  # Sample 500 individuals using a multinomial distribution & apply selex
+  sampled <- rmultinom(1, 500, props)*survey_selex[,2]
 
   # Create a data frame with zero counts for all age groups
   result <- data.frame(timestep = timestep, long = long, lat = lat,
