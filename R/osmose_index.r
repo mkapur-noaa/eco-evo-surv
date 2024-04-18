@@ -8,11 +8,14 @@
 # From Maia: 'It would be nice to have a simple illustration of whether or not accounting for spatio-temporal processes in a standardization framework dramatically change(s)'
 #################################################
 
-library(tidyverse)
+library(dplyr)
+library(ggplot2)
 library(mgcv)
+library(gratia)
 library(here)
 
-raw <- read.csv(here::here("data","sampler_raw.csv")) # From Maia Feb 6 2024
+raw <- read.csv(here::here("data", "sampler_raw.csv")) # From Maia Feb 6 2024
+
 # Data description
 # lat: 52 vertical latitudinal cells
 # lon: 25 horizontal longitudinal cells
@@ -32,7 +35,7 @@ unique(single_sp$timestep)
 survstep <- 25 # The timestep when the survey happens
 
 single_sp |>
-  filter(timestep == survstep) |>
+  dplyr::filter(timestep == survstep) |>
   ggplot(aes(x = lon, y = lat, fill = log(true_biomass))) +
   geom_tile() +
   coord_equal()
@@ -48,7 +51,12 @@ grid |>
   geom_tile(fill = "red") +
   coord_equal()
 
-get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
+cv <- function(x) {
+  y <- sd(x) / mean(x)
+  return(y)
+}
+
+get_gam_index <- function(dat, survey_timestep = 12, grid = grid, sims_gratia = 10) {
   # dat is the data for a single species - here we use true values from a SRS that assumes every observation is of the true state.
   # survey_timestep is an index between 1 and 72 defining which bimonthly time point has data collected for it.
   # grid is the survey grid (the full area that we want to extrapolate to)
@@ -56,15 +64,17 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
     stop("Survey timestep (when the survey happens) must be between 1 and 24, assuming data on true biomass are indexed every two weeks.")
   }
 
-  nyr <- max(dat$timestep)/24
-  survsteps <- survey_timestep + seq(0, (nyr-1)*24, by = 24) # which timesteps have a survey in them
+  nyr <- max(dat$timestep) / 24
+  survsteps <- survey_timestep + seq(0, (nyr - 1) * 24, by = 24) # which timesteps have a survey in them
 
   if (length(survsteps) == 0) {
     stop("No years with survey data.")
   }
-  survdat <<- dat[which(dat$timestep %in% survsteps), ]
-  for(i in 1:nrow(survdat)){
-    survdat$year[i] <<- which(survsteps == survdat$timestep[i])
+  survdat <- dat[which(dat$timestep %in% survsteps), ]
+
+  # survdat$year <- NA
+  for (i in 1:nrow(survdat)) {
+    survdat$year[i] <- which(survsteps == survdat$timestep[i])
   }
 
   mod <- gam(
@@ -84,37 +94,56 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid) {
     grid_list[[y]] <- df
   }
 
-  longgrid <- bind_rows(grid_list)
+  longgrid <- dplyr::bind_rows(grid_list)
   row.names(longgrid) <- NULL
 
+  # use gratia to draw fitted values from the posterior of the model
+  sims <- gratia::fitted_samples(mod,
+    n = sims_gratia, data = longgrid,
+    scale = "response", seed = 123
+  )
+  sims$year <- longgrid$year[sims$row]
+  sims$area <- 1
+  sims$biomass <- sims$fitted * sims$area # expand from density to biomass, given area - this is not needed when all areas = 1 but I'm leaving it in for thoroughness
 
-  pred_gam <- predict(mod,
-    type = "response",
-    newdata = longgrid
-  ) # This takes a long time.
-  pred_gam_df <- cbind(longgrid, pred_gam)
-  pred_gam_df$area <- 1 # default cell area
-
-  gam_idx_mt <- pred_gam_df |>
+  gam_idx_mt <- sims |>
+    dplyr::group_by(year, draw) |>
+    dplyr::summarise_at("biomass", list(biomass = sum)) |>
     dplyr::group_by(year) |>
-    summarize(gam_total_biomass = sum(pred_gam))
+    dplyr::summarize_at("biomass", list(est = mean, sd = sd, CV = cv)) |>
+    dplyr::ungroup()
 
-  return(gam_idx_mt)
+  return(list(idx = gam_idx_mt, survey_data = survdat))
 }
 
-sprat_idx <- get_gam_index(dat = single_sp,survey_timestep = 12,grid = grid)
+sprat_idx <- get_gam_index(dat = single_sp, survey_timestep = 12, grid = grid, sims_gratia = 1000)
 
 # NOTE: You'll want to multiply these indices by two to get the total estimated index for a given year, because the predictions are only for the 50% of the area that was surveyed (if that makes sense). Basically, since I don't have access to the full grid for the area that the survey is representing, I am only predicting the total biomass of the surveyed area, here.
-db <- survdat |>
+
+db <- sprat_idx$survey_data |>
   group_by(year) |>
-  summarize(db_total_biomass = sum(true_biomass))
+  summarize(idx = sum(true_biomass), #These say "true" but don't be fooled! They're only calculated from a subset of the data!
+            sd = sd(true_biomass),
+            cv = cv(true_biomass))
 
-mb <- sprat_idx
+mb <- sprat_idx$idx
 
-plot(db$year,db$db_total_biomass, xlab="year", ylab="index")
-lines(db$year,db$db_total_biomass)
+plot(idx/1000 ~ year, data = db,
+     xlab = "year", ylab = "index", pch = 19,
+     ylim = c(min(db$idx/1000),
+              max(db$idx/1000)*1.5))
+lines(idx/1000 ~ year, data = db)
+segments(x0 = db$year,
+         x1 = db$year,
+         y0 = db$idx/1000 - db$sd/1000,
+         y1 = db$idx/1000 + db$sd/1000)
 
-points(mb$year, mb$gam_total_biomass,col = 'red')
-lines(mb$year, mb$gam_total_biomass,col = 'red')
+points(est/1000 ~ year, data = mb, col = "red", pch = 19)
+lines(est/1000 ~ year, data = mb, col = "red")
+segments(x0 = db$year,
+         x1 = db$year,
+         y0 = mb$est/1000 - mb$sd/1000,
+         y1 = mb$est/1000 + mb$sd/1000,
+         col = "red")
 
-legend('bottomright',legend = c('design-based','model-based'),col=c("black","red"), pch = c(1,1),lty=c(1,1))
+legend("topright", legend = c("design-based", "model-based"), col = c("black", "red"), pch = c(19, 19), lty = c(1, 1))
