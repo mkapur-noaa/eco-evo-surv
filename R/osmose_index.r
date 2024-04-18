@@ -116,27 +116,27 @@ get_gam_index <- function(dat, survey_timestep = 12, grid = grid, sims_gratia = 
   return(list(idx = gam_idx_mt, survey_data = survdat))
 }
 
-sprat_idx <- get_gam_index(dat = single_sp, survey_timestep = 12, grid = grid, sims_gratia = 100)
+sprat_idx <- get_gam_index(dat = single_sp, survey_timestep = 12, grid = grid, sims_gratia = 1000)
 
 # NOTE: You'll want to multiply these indices by two to get the total estimated index for a given year, because the predictions are only for the 50% of the area that was surveyed (if that makes sense). Basically, since I don't have access to the full grid for the area that the survey is representing, I am only predicting the total biomass of the surveyed area, here.
 
 db <- sprat_idx$survey_data |>
   group_by(year) |>
-  summarize(db_total_biomass = sum(true_biomass), #These say "true" but don't be fooled! They're only calculated from a subset of the data!
-            db_sd_biomass = sd(true_biomass),
-            db_cv_biomass = cv(true_biomass))
+  summarize(idx = sum(true_biomass), #These say "true" but don't be fooled! They're only calculated from a subset of the data!
+            sd = sd(true_biomass),
+            cv = cv(true_biomass))
 
 mb <- sprat_idx$idx
 
-plot(db_total_biomass/1000 ~ year, data = db,
+plot(idx/1000 ~ year, data = db,
      xlab = "year", ylab = "index", pch = 19,
-     ylim = c(min(db$db_total_biomass/1000),
-              max(db$db_total_biomass/1000)*1.5))
-lines(db_total_biomass/1000 ~ year, data = db)
+     ylim = c(min(db$idx/1000),
+              max(db$idx/1000)*1.5))
+lines(idx/1000 ~ year, data = db)
 segments(x0 = db$year,
          x1 = db$year,
-         y0 = db$db_total_biomass/1000 - db$db_sd_biomass/1000,
-         y1 = db$db_total_biomass/1000 + db$db_sd_biomass/1000)
+         y0 = db$idx/1000 - db$sd/1000,
+         y1 = db$idx/1000 + db$sd/1000)
 
 points(est/1000 ~ year, data = mb, col = "red", pch = 19)
 lines(est/1000 ~ year, data = mb, col = "red")
