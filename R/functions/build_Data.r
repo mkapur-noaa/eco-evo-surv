@@ -79,12 +79,14 @@ build_Data<-function(scenario,
 
   ## strip and format catches (want yr x Age, outputs are spp x Age x timestep)
   yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
-  yield_path <- paste0(dirtmp, paste0("/AgeIndicators/ns_yieldDistribByAge_Simu", repID,".nc") )
-  names(nc_open(yield_path)$var) 
+ yield_path <-   list.files(dirtmp,
+                                 pattern = paste0('ns_yieldDistribByAge*'),
+                                 recursive = T,
+                                 full.names = TRUE)[repID]
+
+   repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
+
   yield0 <- ncvar_get(nc_open(yield_path),"biomass") 
-  summary(reshape2::melt(yield0))
-
-
 
   yield1 <- reshape2::melt(yield0) %>% 
     mutate(year = 2010 + (Var3 - 1) %/% 24,
@@ -92,22 +94,34 @@ build_Data<-function(scenario,
     filter(Var1 == sppIdx) %>%
     select(year, age = Var2, value) %>%
        group_by(year,age) %>%
-    summarise(value = sum(value)) 
+    summarise(value = sum(value)) %>%
+    ungroup()
     
-    yield <- yield1 %>% ## total over the year
-    tidyr::pivot_wider(names_from = age, values_from = value) 
-     # define maximum age above which all entries are NA
+
+
+     # define maximum age above which all entries are NA or zero
   max_age_catch <- yield1 %>%
     group_by(age) %>%
     summarise(all_zero = all(value == 0)) %>%
     filter(!all_zero) %>%
     summarise(max_age = max(age))
-  max_age <- as.numeric(max_age)
-  
-
-    ungroup() %>%
-    select(-month)
-
+  max_age_catch <- as.numeric(max_age_catch)
+    
+  yield1 %>% 
+  ## truncate age-zeros and max ages
+    mutate(value = case_when(age == 1 ~ -999, 
+    age >= max_age_catch  ~ -999, 
+    age < max_age_catch ~ round(value))) %>%
+    tidyr::pivot_wider(names_from = age, values_from = value) %>%
+    select(-year) %>% 
+    
+  # save the results
+  write.table(.,
+              sep = ' ',
+            paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+            '-rep',repID2,'-',Sys.Date(),
+            '-wham_catch_at_age.csv'),
+            row.names = FALSE)
 
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
