@@ -49,7 +49,7 @@ build_Data<-function(scenario,
 
   ## maturity (year x age) ----
 
-  mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repuse,".csv")
+  mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repID,".csv")
   read.csv(mat_path, skip = 1, header = T) %>%
     reshape2::melt(id = c('Time','Age')) %>%
     filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
@@ -69,8 +69,13 @@ build_Data<-function(scenario,
 
   ## WAA matrices (catch, discards (unused), ssb)
   ## the WAA in the catch is given by the yield by age netcdf
-  ## the WAA used to calculate SSB is given by the size by age csvs,
-
+  ## the WAA used to calculate SSB is given by the size by age csvs, and the allometric w-L parameters in the model
+  lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%
+    filter(species == sppLabs2[sppIdx,2]) %>%
+    #select(-species) %>%
+    tidyr::pivot_longer(cols = -c(species0,species), names_to = 'age', values_to = 'value') %>%
+    mutate(age = as.numeric(age)) %>%
+    arrange(age)
 
   ## strip and format catches (yr x Age)
   yield_files <- list.files(dirtmp, pattern = 'ns_yield*', recursive = T, full.names = TRUE)
@@ -86,13 +91,13 @@ build_Data<-function(scenario,
   age_spatial_path <- list.files(dirtmp,
                                  pattern = paste0('spatial_abundancebyAge-',sppLabs2[sppIdx,2]),
                                  recursive = T,
-                                 full.names = TRUE)[repuse]
+                                 full.names = TRUE)[repID]
   biom_spatial_path <- list.files(dirtmp,
                                  pattern = paste0('spatial_biomassbyAge-',sppLabs2[sppIdx,2]),
                                  recursive = T,
-                                 full.names = TRUE)[repuse]
+                                 full.names = TRUE)[repID]
 
-  repID <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
+  repID2 <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
   abundance0 <- ncvar_get(nc_open(age_spatial_path),"abundance") ## this might need to switch with units_use
   ## this is age (26) lat (25) lon (52) timestep (24/year 2010-2099)
@@ -112,13 +117,12 @@ build_Data<-function(scenario,
   # define maximum age above which all entries are NA
   max_age <- abundance %>%
     group_by(age) %>%
-    #summarise(mean(value, na.RM = TRUE)) %>% tail(10)
     summarise(all_zero = all(value == 0)) %>%
     filter(!is.na(all_zero)) %>%
     summarise(max_age = max(age))
   max_age <- as.numeric(max_age)
 
-  total_area <- length(unique(abundance$lat))*length(unique(abundance$long))
+  total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
 
   biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass") ## this might need to switch with units_use
   biomass <- reshape2::melt(biomass0) %>%
@@ -160,12 +164,14 @@ build_Data<-function(scenario,
       ungroup() %>%
       summarise(
         abund_mean = mean(station_abund)*total_area,
-        abund_se = sqrt((total_area-nrow(selected_cells))/(total_area-1))*(var(station_abund, na.rm = T)*total_area/sqrt(nrow(selected_cells))), ## Spencer method with finite pop correction term
-        #abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)), ## Oyafuso method
+        term1 = sd(station_abund, na.rm = T)*total_area/sqrt(nrow(selected_cells)),
+        term2 = sqrt((total_area-nrow(selected_cells))/(total_area-1)),
+        abund_se = term1*term2, ## Spencer method with finite pop correction term
+        abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)), ## Oyafuso method
         #abund_cv = abund_sd/abund_mean  ## Oyafuso method
         abund_cv = abund_se/abund_mean
         ) %>%
-      mutate(year = timestep, replicate = repID, scenario = scenario, species = sppLabs2[sppIdx,2])
+      mutate(year = timestep, replicate = repID2, scenario = scenario, species = sppLabs2[sppIdx,2])
 
     results_index[[paste(timestep)]] <- survey_biomass
 
@@ -219,7 +225,7 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-            here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_survey.csv')),
+            here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID2,'-',scenLabs2[scenario,2],'-wham_survey.csv')),
             row.names = FALSE)
 
 
@@ -295,7 +301,7 @@ build_Data<-function(scenario,
 
 
 
-  png(file = here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',
+  png(file = here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID2,'-',
                                       scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
       height = 8, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(map, index, comps, cols = 3)
@@ -306,6 +312,6 @@ build_Data<-function(scenario,
 
   cat('Built data and summary figures for',paste0(sppLabs2[sppIdx,2],
                                                   ' ',scenLabs2[scenario,2],' replicate ',
-                                                  repID))
+                                                  repID2))
 
 }
