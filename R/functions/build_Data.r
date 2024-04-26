@@ -16,7 +16,7 @@
 
 build_Data<-function(scenario,
                      sppIdx,
-                     repuse = 1,
+                     repID = 1,
                      yrs_use = 2010:2099,
                      srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=8)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
@@ -32,9 +32,10 @@ build_Data<-function(scenario,
   # setwd(wham.dir)
 
   ## mortality (year x age) ----
+
   ## don't have age-specific values so keep same
-  readLines(mort_path,n=2,skip = 1)
-  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',sppLabs2[sppIdx,2],"_Simu",repuse,".csv")
+
+  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',sppLabs2[sppIdx,2],"_Simu",repID,".csv")
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
     group_by(year) %>%
@@ -47,6 +48,7 @@ build_Data<-function(scenario,
                 row.names = FALSE)
 
   ## maturity (year x age) ----
+
   mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repuse,".csv")
   read.csv(mat_path, skip = 1, header = T) %>%
     reshape2::melt(id = c('Time','Age')) %>%
