@@ -77,51 +77,52 @@ build_Data<-function(scenario,
     mutate(age = as.numeric(age)) %>%
     arrange(age)
 
+
+  ## Yield data ----
   ## strip and format catches (want yr x Age, outputs are spp x Age x timestep)
   yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
- yield_path <-   list.files(dirtmp,
-                                 pattern = paste0('ns_yieldDistribByAge*'),
-                                 recursive = T,
-                                 full.names = TRUE)[repID]
+  yield_path <-   list.files(dirtmp,
+                             pattern = paste0('ns_yieldDistribByAge*'),
+                             recursive = T,
+                             full.names = TRUE)[repID]
 
-   repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
+  repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
-  yield0 <- ncvar_get(nc_open(yield_path),"biomass") 
+  yield0 <- ncvar_get(nc_open(yield_path),"biomass")
 
-  yield1 <- reshape2::melt(yield0) %>% 
+  yield1 <- reshape2::melt(yield0) %>%
     mutate(year = 2010 + (Var3 - 1) %/% 24,
-           month = ((Var3 - 1) %% 24) %/% 2 + 1) %>% 
+           month = ((Var3 - 1) %% 24) %/% 2 + 1) %>%
     filter(Var1 == sppIdx) %>%
     select(year, age = Var2, value) %>%
-       group_by(year,age) %>%
+    group_by(year,age) %>%
     summarise(value = sum(value)) %>%
     ungroup()
-    
 
-
-     # define maximum age above which all entries are NA or zero
+  # define maximum age above which all entries are NA or zero
+  # this might need to be 26 or the population max age, no matter waht
   max_age_catch <- yield1 %>%
     group_by(age) %>%
     summarise(all_zero = all(value == 0)) %>%
     filter(!all_zero) %>%
     summarise(max_age = max(age))
   max_age_catch <- as.numeric(max_age_catch)
-    
-  yield1 %>% 
-  ## truncate age-zeros and max ages
-    mutate(value = case_when(age == 1 ~ -999, 
-    age >= max_age_catch  ~ -999, 
-    age < max_age_catch ~ round(value))) %>%
+
+  yield1 %>%
+    ## truncate age-zeros and max ages
+    mutate(value = case_when(age == 1 ~ -999,
+                             age >= max_age_catch  ~ -999,
+                             age < max_age_catch ~ round(value))) %>%
     tidyr::pivot_wider(names_from = age, values_from = value) %>%
-    select(-year) %>% 
-    
-  # save the results
-  write.table(.,
-              sep = ' ',
-            paste0(wham.dir,"/",sppLabs2[sppIdx,2],
-            '-rep',repID2,'-',Sys.Date(),
-            '-wham_catch_at_age.csv'),
-            row.names = FALSE)
+    select(-year) %>%
+
+    # save the results
+    write.table(.,
+                sep = ' ',
+                paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+                       '-rep',repID2,'-',Sys.Date(),
+                       '-wham_catch_at_age.csv'),
+                row.names = FALSE)
 
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
@@ -136,9 +137,9 @@ build_Data<-function(scenario,
                                  recursive = T,
                                  full.names = TRUE)[repID]
   biom_spatial_path <- list.files(dirtmp,
-                                 pattern = paste0('spatial_biomassbyAge-',sppLabs2[sppIdx,2]),
-                                 recursive = T,
-                                 full.names = TRUE)[repID]
+                                  pattern = paste0('spatial_biomassbyAge-',sppLabs2[sppIdx,2]),
+                                  recursive = T,
+                                  full.names = TRUE)[repID]
 
   repID2 <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
@@ -161,7 +162,7 @@ build_Data<-function(scenario,
   max_age <- abundance %>%
     group_by(age) %>%
     summarise(all_zero = all(value == 0)) %>%
-      filter(!all_zero) %>%
+    filter(!all_zero) %>%
     summarise(max_age = max(age))
   max_age <- as.numeric(max_age)
 
@@ -213,8 +214,8 @@ build_Data<-function(scenario,
         abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)), ## Oyafuso method
         #abund_cv = abund_sd/abund_mean  ## Oyafuso method
         abund_cv = abund_se/abund_mean
-        ) %>%
-        select(-term1, -term2) %>%
+      ) %>%
+      select(-term1, -term2) %>%
       mutate(year = timestep, replicate = repID2, scenario = scenario, species = sppLabs2[sppIdx,2])
 
     results_index[[paste(timestep)]] <- survey_biomass
@@ -223,7 +224,7 @@ build_Data<-function(scenario,
     for (i in 1:nrow(selected_cells)) {
       # Filter the data for the current cell (all ages present in population)
       cell_data <- timestep_data_age[timestep_data_age$long == selected_cells$long[i] &
-                                   timestep_data_age$lat == selected_cells$lat[i], ]
+                                       timestep_data_age$lat == selected_cells$lat[i], ]
 
       if(all(is.na(cell_data$value))) next ## skip if no data
       # cat(i,"\n")
@@ -237,7 +238,7 @@ build_Data<-function(scenario,
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
     filter(age <= max_age)
-    # mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
+  # mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
   results_df_age <- results_df_age_spatial %>%
@@ -270,19 +271,19 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-            paste0(wham.dir,"/",sppLabs2[sppIdx,2],
-            '-rep',repID2,'-',Sys.Date(),
-            '-wham_survey.csv'),
-            row.names = FALSE)
+              paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+                     '-rep',repID2,'-',Sys.Date(),
+                     '-wham_survey.csv'),
+              row.names = FALSE)
 
 
   ## summary figures
   ## maps of true biomass thru time
   map <- biomass %>%
-      #group_by(lat, long) %>%
+    #group_by(lat, long) %>%
     #group_by(year, lat, long) %>%
     summarise(tot_val = sum(value), .by = c(year, lat, long)) %>%
-        ungroup() %>%
+    ungroup() %>%
     mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
 
     filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
@@ -291,7 +292,7 @@ build_Data<-function(scenario,
     theme_void()+
     geom_raster()+
     geom_point(data = filter(survey_array, year %in% floor(seq(2020,max(biomass$year),length.out = 4))),
-          fill = NA,
+               fill = NA,
                color = 'red', shape = 4, size = 0.1)+
     scale_fill_viridis_c(na.value = NA)+
     theme(strip.text = element_text(size = 25),
@@ -317,11 +318,11 @@ build_Data<-function(scenario,
                     mutate(abund_mean_rescale = rescale(abund_mean, to = c(0,1))),
                   aes(x = year, y = abund_mean)) +
     geom_point(color = scenLabs2[scenario,'Pal'])+
-        geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
+    geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
                       ymax = abund_mean + abund_mean*abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     #geom_line(data = true_abund, color = 'grey3')+
     #geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
-                      #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
+    #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
     labs(x = 'Year', y = 'Biomass', title = 'Survey Index')
@@ -333,30 +334,30 @@ build_Data<-function(scenario,
     ungroup() %>%
     ggplot(.) +
     geom_area(alpha =0.4,
-                 aes(x = age, y = frequency,
-                     group = factor(year),
-                     fill = factor(year), color = factor(year)))+
+              aes(x = age, y = frequency,
+                  group = factor(year),
+                  fill = factor(year), color = factor(year)))+
     # geom_bar(aes(x = age, y = frequency, group = factor(year), color = factor(year)),stat = 'identity')+
     scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 2),expand = c(0,0))+
     scale_y_continuous(expand = c(0,0))+
     labs(x = 'Age', y = 'Frequency', color = 'Year', title = 'Survey Age Comps') +
     scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
-                                                               modification = "go_lighter",
-                                                               n_colours = length(unique(results_df_age$year)),
-                                                               view_palette = FALSE)) +
+                                                              modification = "go_lighter",
+                                                              n_colours = length(unique(results_df_age$year)),
+                                                              view_palette = FALSE)) +
     scale_color_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
                                                                modification = "go_lighter",
                                                                n_colours = length(unique(results_df_age$year)),
                                                                view_palette = FALSE)) +
     theme(legend.position = 'none', axis.text.y = element_blank()) #+
-    # facet_grid(year~., scales = 'free') +
-    # theme(panel.spacing = unit(0.2, "lines"),)
+  # facet_grid(year~., scales = 'free') +
+  # theme(panel.spacing = unit(0.2, "lines"),)
 
 
 
   png(file = paste0(wham.dir,"/",sppLabs2[sppIdx,2],
-            '-rep',repID2,'-',Sys.Date(),
-            '-input_data.png'),
+                    '-rep',repID2,'-',Sys.Date(),
+                    '-input_data.png'),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(map, index, comps, cols = 3)
   # Rmisc::multiplot(map, index, cols = 2)
