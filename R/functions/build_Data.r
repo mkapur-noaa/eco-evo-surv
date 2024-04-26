@@ -18,9 +18,9 @@ build_Data<-function(scenario,
                      sppIdx,
                      repuse = 1,
                      yrs_use = 2010:2099,
-                     srv_selex = 8, ## whether or not there is survey selex (logistic with A50=8)
-                     obs_error = 0.2, ## whether or not survey biomass has observation error
-                     units = 'numbers',
+                     srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=8)
+                     obs_error = 0.2, ## whether or not survey sampled with observation error
+                     units = 'biomass', ## units for survey observations
                      units_scalar = 1e6){
 
   ## where the raw evOsmose outputs are stored
@@ -66,6 +66,8 @@ build_Data<-function(scenario,
 
 
   ## WAA matrices (catch, discards (unused), ssb)
+  ## the WAA in the catch is given by the yield by age netcdf
+  ## the WAA used to calculate SSB is given by the size by age csvs,
 
 
   ## strip and format catches (yr x Age)
@@ -156,8 +158,11 @@ build_Data<-function(scenario,
       ungroup() %>%
       summarise(
         abund_mean = mean(station_abund)*total_area,
-        abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)),
-        abund_cv = abund_sd/abund_mean ) %>%
+        abund_se = sqrt((total_area-nrow(selected_cells))/(total_area-1))*(var(station_abund, na.rm = T)*total_area/sqrt(nrow(selected_cells))), ## Spencer method with finite pop correction term
+        #abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)), ## Oyafuso method
+        #abund_cv = abund_sd/abund_mean  ## Oyafuso method
+        abund_cv = abund_se/abund_mean
+        ) %>%
       mutate(year = timestep, replicate = repID, scenario = scenario, species = sppLabs2[sppIdx,2])
 
     results_index[[paste(timestep)]] <- survey_biomass
