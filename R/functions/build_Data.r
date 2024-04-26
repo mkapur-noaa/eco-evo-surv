@@ -21,7 +21,7 @@ build_Data<-function(scenario,
                      srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=8)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
                      units = 'biomass', ## units for survey observations
-                     units_scalar = 1e6){
+                     units_scalar = 1){
 
   ## where the raw evOsmose outputs are stored
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scenLabs2[scenario,2],'/output')
@@ -236,10 +236,12 @@ build_Data<-function(scenario,
   ## summary figures
   ## maps of true biomass thru time
   map <- biomass %>%
-    group_by(year, lat, long) %>%
-    summarise(tot_val = sum(value)) %>%
+      #group_by(lat, long) %>%
+    #group_by(year, lat, long) %>%
+    summarise(tot_val = sum(value), .by = c(year, lat, long)) %>%
+        ungroup() %>%
     mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
-    ungroup() %>%
+
     filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
     ggplot(data = ., aes(x = lat, y = long,
                          fill = abundance_rescale))+
@@ -247,7 +249,7 @@ build_Data<-function(scenario,
     geom_raster()+
     geom_point(data = filter(survey_array, year %in% floor(seq(2020,max(biomass$year),length.out = 4))),
           fill = NA,
-               color = 'red', shape = 4)+
+               color = 'red', shape = 4, size = 0.1)+
     scale_fill_viridis_c(na.value = NA)+
     theme(strip.text = element_text(size = 25),
           strip.text.y = element_blank(),
@@ -270,13 +272,16 @@ build_Data<-function(scenario,
 
   index <- ggplot(results_df_index %>%
                     mutate(abund_mean_rescale = rescale(abund_mean, to = c(0,1))),
-                  aes(x = year, y = abund_mean_rescale)) +
+                  aes(x = year, y = abund_mean)) +
     geom_point(color = scenLabs2[scenario,'Pal'])+
-    geom_line(data = true_abund, color = 'grey3')+
-    geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
-                      ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
+        geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
+                      ymax = abund_mean + abund_mean*abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
+    #geom_line(data = true_abund, color = 'grey3')+
+    #geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
+                      #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
-    labs(x = 'Year', y = 'Biomass (rescaled)', title = 'Survey Index')
+    scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
+    labs(x = 'Year', y = 'Biomass', title = 'Survey Index')
 
   ## survey age comps
   comps <- results_df_age %>%
@@ -289,7 +294,8 @@ build_Data<-function(scenario,
                      group = factor(year),
                      fill = factor(year), color = factor(year)))+
     # geom_bar(aes(x = age, y = frequency, group = factor(year), color = factor(year)),stat = 'identity')+
-    scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 2))+
+    scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 2),expand = c(0,0))+
+    scale_y_continuous(expand = c(0,0))+
     labs(x = 'Age', y = 'Frequency', color = 'Year', title = 'Survey Age Comps') +
     scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
                                                                modification = "go_lighter",
@@ -299,7 +305,7 @@ build_Data<-function(scenario,
                                                                modification = "go_lighter",
                                                                n_colours = length(unique(results_df_age$year)),
                                                                view_palette = FALSE)) +
-    theme(legend.position = 'none') #+
+    theme(legend.position = 'none', axis.text.y = element_blank()) #+
     # facet_grid(year~., scales = 'free') +
     # theme(panel.spacing = unit(0.2, "lines"),)
 
@@ -308,7 +314,7 @@ build_Data<-function(scenario,
   png(file = paste0(wham.dir,"/",sppLabs2[sppIdx,2],
             '-rep',repID2,'-',Sys.Date(),
             '-input_data.png'),
-      height = 8, width = 12, unit = 'in',res = 520)
+      height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(map, index, comps, cols = 3)
   # Rmisc::multiplot(map, index, cols = 2)
   dev.off()
