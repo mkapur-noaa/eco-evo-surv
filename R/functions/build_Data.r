@@ -77,8 +77,37 @@ build_Data<-function(scenario,
     mutate(age = as.numeric(age)) %>%
     arrange(age)
 
-  ## strip and format catches (yr x Age)
-  yield_files <- list.files(dirtmp, pattern = 'ns_yield*', recursive = T, full.names = TRUE)
+  ## strip and format catches (want yr x Age, outputs are spp x Age x timestep)
+  yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
+  yield_path <- paste0(dirtmp, paste0("/AgeIndicators/ns_yieldDistribByAge_Simu", repID,".nc") )
+  names(nc_open(yield_path)$var) 
+  yield0 <- ncvar_get(nc_open(yield_path),"biomass") 
+  summary(reshape2::melt(yield0))
+
+
+
+  yield1 <- reshape2::melt(yield0) %>% 
+    mutate(year = 2010 + (Var3 - 1) %/% 24,
+           month = ((Var3 - 1) %% 24) %/% 2 + 1) %>% 
+    filter(Var1 == sppIdx) %>%
+    select(year, age = Var2, value) %>%
+       group_by(year,age) %>%
+    summarise(value = sum(value)) 
+    
+    yield <- yield1 %>% ## total over the year
+    tidyr::pivot_wider(names_from = age, values_from = value) 
+     # define maximum age above which all entries are NA
+  max_age_catch <- yield1 %>%
+    group_by(age) %>%
+    summarise(all_zero = all(value == 0)) %>%
+    filter(!all_zero) %>%
+    summarise(max_age = max(age))
+  max_age <- as.numeric(max_age)
+  
+
+    ungroup() %>%
+    select(-month)
+
 
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
@@ -118,7 +147,7 @@ build_Data<-function(scenario,
   max_age <- abundance %>%
     group_by(age) %>%
     summarise(all_zero = all(value == 0)) %>%
-    filter(!is.na(all_zero)) %>%
+      filter(!all_zero) %>%
     summarise(max_age = max(age))
   max_age <- as.numeric(max_age)
 
