@@ -171,6 +171,7 @@ build_Data<-function(scenario,
         #abund_cv = abund_sd/abund_mean  ## Oyafuso method
         abund_cv = abund_se/abund_mean
         ) %>%
+        select(-term1, -term2) %>%
       mutate(year = timestep, replicate = repID2, scenario = scenario, species = sppLabs2[sppIdx,2])
 
     results_index[[paste(timestep)]] <- survey_biomass
@@ -194,6 +195,7 @@ build_Data<-function(scenario,
   results_df_age_spatial <- do.call(rbind, results_age) %>%
     filter(age <= max_age)
     # mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
+
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
   results_df_age <- results_df_age_spatial %>%
     group_by(timestep, age) %>%
@@ -225,7 +227,9 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-            here::here('output','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID2,'-',scenLabs2[scenario,2],'-wham_survey.csv')),
+            paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+            '-rep',repID2,'-',Sys.Date(),
+            '-wham_survey.csv'),
             row.names = FALSE)
 
 
@@ -286,7 +290,7 @@ build_Data<-function(scenario,
                      fill = factor(year), color = factor(year)))+
     # geom_bar(aes(x = age, y = frequency, group = factor(year), color = factor(year)),stat = 'identity')+
     scale_x_continuous(breaks = seq(0, max(results_df_age$age), by = 2))+
-    labs(x = 'Age', y = 'Frequency', color = 'Year', title = 'Surveyed Age Comps') +
+    labs(x = 'Age', y = 'Frequency', color = 'Year', title = 'Survey Age Comps') +
     scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
                                                                modification = "go_lighter",
                                                                n_colours = length(unique(results_df_age$year)),
@@ -301,12 +305,12 @@ build_Data<-function(scenario,
 
 
 
-  png(file = here::here('figs',paste0(sppLabs2[sppIdx,2],'-rep',repID2,'-',
-                                      scenLabs2[scenario,2],'-abundance-',units,'-',Sys.Date(),'.png')),
+  png(file = paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+            '-rep',repID2,'-',Sys.Date(),
+            '-input_data.png'),
       height = 8, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(map, index, comps, cols = 3)
   # Rmisc::multiplot(map, index, cols = 2)
-
   dev.off()
 
 
