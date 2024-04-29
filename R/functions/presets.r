@@ -53,6 +53,27 @@ survey_array <- build_survey_array(fractional_coverage = 0.3)
 
 # parm_path <- "F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/cc_evo/ns_param-species.csv" ## stored once for all runs, not time-invariant
 
+#* max age (lifespan)
+read.csv(parm_path, header = F) %>%
+  filter(grepl('lifespan.sp',V1)) %>%
+  filter(!grepl('#species',V1)) %>% ## drop commented-out ones
+  mutate(sppIdxTEMP = as.numeric(stringr::str_extract(V1, "\\d+$"))) %>%
+  merge(., sppLabs2, by.x = 'sppIdxTEMP', by.y = 'Var3') %>%
+  select(species0 =  sppIdxTEMP, species = Var2, value = V2) %>%
+  write.csv(here::here('outputs','wham_runs','max_age.csv'), row.names = FALSE)
+
+
+#* length-at-age von B pars ----
+# read.csv(parm_path, header = F) %>%
+# filter(grepl('length2weight',V1)) %>%
+#  mutate(sppIdxTEMP = stringr::str_extract(V1, "\\d+$"),
+#   variable = stringr::str_extract(V1, "(?<=length2weight\\.)\\w+(?=\\.)")) %>%
+# merge(., sppLabs2, by.x = 'sppIdxTEMP', by.y = 'Var3') %>%
+#  select(species0 =  sppIdxTEMP, species = Var2, variable, value = V2) %>%
+#  tidyr::pivot_wider(names_from = variable, values_from = value) %>%
+#  write.csv(here::here('outputs','wham_runs','length2weight.csv'), row.names = FALSE)
+
+
 #* length-weight allometric pars ----
 # read.csv(parm_path, header = F) %>%
 # filter(grepl('length2weight',V1)) %>%
