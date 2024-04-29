@@ -73,7 +73,7 @@ build_Data<-function(scenario,
 
   ## don't have age-specific values so keep same
 
-  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',spname,"_Simu",repID,".csv")
+  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',spname,"_Simu",repID2,".csv")
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
     group_by(year) %>%
@@ -83,12 +83,12 @@ build_Data<-function(scenario,
          byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",spname,'-rep',repID-1,'-',scen,'-wham_mortality.csv'),
+                paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,'-wham_mortality.csv'),
                 row.names = FALSE)
 
   ## maturity (year x age) ----
 
-  mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repID,".csv")
+  mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repID2,".csv")
   read.csv(mat_path, skip = 1, header = T) %>%
     reshape2::melt(id = c('Time','Age')) %>%
     filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
@@ -102,7 +102,7 @@ build_Data<-function(scenario,
     select(-year) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",spname,'-rep',repID-1,'-',scen,'-wham_maturity.csv'),
+                paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,'-wham_maturity.csv'),
                 row.names = FALSE)
 
   ## Survey data ----
