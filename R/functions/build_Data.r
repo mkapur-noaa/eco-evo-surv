@@ -34,12 +34,8 @@ build_Data<-function(scenario,
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
   ## where the WHAM outputs are to be stored
-  wham.dir <- here::here('outputs','wham_runs',paste0(spname,'-rep',repID2,'-',scen,"-",Sys.Date()))
+  wham.dir <- here::here('outputs','wham_runs',file_suffix)
   if(!dir.exists(wham.dir)) dir.create(wham.dir)
-
-  ##
-
-  # setwd(wham.dir)
 
   ## load parameters for this species ----
   lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
@@ -86,7 +82,7 @@ build_Data<-function(scenario,
          byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,'-wham_mortality.csv'),
+                paste0(wham.dir,"/",file_suffix,'-wham_mortality.csv'),
                 row.names = FALSE)
 
   ## maturity (year x age) ----
@@ -105,7 +101,7 @@ build_Data<-function(scenario,
     select(-year) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,'-wham_maturity.csv'),
+                paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
                 row.names = FALSE)
 
   ## Survey data ----
@@ -254,9 +250,7 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-              paste0(wham.dir,"/",spname,
-                     '-rep',repID2,'-',Sys.Date(),
-                     '-wham_survey.csv'),
+              paste0(wham.dir,"/",file_suffix,'-wham_survey.csv'),
               row.names = FALSE)
 
 
@@ -302,9 +296,7 @@ build_Data<-function(scenario,
     # save the results
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",spname,
-                       '-rep',repID2,'-',Sys.Date(),
-                       '-wham_catch_at_age.csv'),
+                paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),
                 row.names = FALSE)
 
   ## WAA matrices ----
@@ -333,14 +325,12 @@ build_Data<-function(scenario,
 
   write.table(waa,
               sep = ' ',
-              paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,
-                     '-wham_waa_ssb.csv'),
+              paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),
               row.names = FALSE)
 
   write.table(waa,
               sep = ' ',
-              paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,
-                     '-wham_waa_catch.csv'),
+              paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
               row.names = FALSE)
 
   #*   catch WAA ----
@@ -351,7 +341,19 @@ build_Data<-function(scenario,
   #*   FOR NOW, assume that the catch WAA matches the population
 
   ## Summary figures ----
-  #* survey figures ----
+  #* Catch Figures ----
+
+  ggplot(yield1, aes(x = year, y = value, fill = as.factor(age))) +
+    theme(legend.position = 'none')+
+    geom_area(alpha =0.4, color = scenLabs2[scenario,'Pal'])+
+    labs(x = 'Year', y = 'Yield (kg)', color = 'Year') +
+    scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
+                                                              modification = "go_lighter",
+                                                              n_colours = length(unique(yield1$age)),
+                                                              view_palette = FALSE))
+  ggsave(last_plot(), file = paste0(wham.dir,"/",file_suffix,"-catch_at_age.png"),
+         width = 6, height = 6, unit = 'in', dpi = 400)
+  #* Survey figures ----
   ## maps of true biomass thru time
   map <- biomass %>%
     #group_by(lat, long) %>%
@@ -429,9 +431,7 @@ build_Data<-function(scenario,
 
 
 
-  png(file = paste0(wham.dir,"/",spname,
-                    '-rep',repID2,'-',Sys.Date(),
-                    '-input_data.png'),
+  png(file =  paste0(wham.dir,"/",file_suffix,   '-survey_data.png'),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(map, index, comps, cols = 3)
   # Rmisc::multiplot(map, index, cols = 2)
