@@ -78,11 +78,17 @@ build_Data<-function(scenario,
   mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',spname,"_Simu",repID2,".csv")
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
+    filter(year != 2100) %>%
     group_by(year) %>%
-    summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4)) %>%
+
+    summarise(Frecruits = round(sum(V12),4),
+              Mrecruits = round(sum(V18),4)) %>%
     ungroup()
-  matrix(rep(mort_csv$Mrecruits, length(1:max_age_pop)),
-         byrow=FALSE, ncol = length(1:max_age_pop)) %>%
+
+
+  matrix(rep(mort_csv$Mrecruits, max_age_pop),
+         byrow=F, nrow = length(2010:2099)) %>%
+
     write.table(.,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_mortality.csv'),
