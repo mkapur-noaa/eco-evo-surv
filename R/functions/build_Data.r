@@ -51,6 +51,9 @@ build_Data<-function(scenario,
 
   max_age_pop <- as.numeric(max_age_pop$value)
 
+
+
+
   ## fishing mortality x age ----
   ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time, so just take first row
   ## Don't have Frate_age exactly, rather Frate_size so this also needs to convert on a species-basis
@@ -255,7 +258,7 @@ build_Data<-function(scenario,
 
 
   ## Yield data ----
-  ## strip and format catches (want yr x Age, outputs are spp x Age x timestep)
+  ## strip and format catches (want yr x Age with totals on end outputs are spp x Age x timestep)
   yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
   yield_path <-   list.files(dirtmp,
                              pattern = paste0('ns_yieldDistribByAge*'),
@@ -292,7 +295,7 @@ build_Data<-function(scenario,
                              age <= max_age_catch ~ round(value))) %>%
     tidyr::pivot_wider(names_from = age, values_from = value) %>%
     select(-year) %>%
-
+    mutate(total = rowSums(.)+999) %>%
     # save the results
     write.table(.,
                 sep = ' ',
