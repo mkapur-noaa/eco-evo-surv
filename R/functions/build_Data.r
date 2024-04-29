@@ -311,13 +311,16 @@ build_Data<-function(scenario,
     group_by(year,Age) %>%
     summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
     ungroup() %>%
-    mutate(  mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
+    mutate(mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
     mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
-    select(-mean_size_cm) %>%
-    tidyr::complete(year = 2010:2099, Age = 1:max_age_pop,
-                    fill = list(value = .$asymp_weight_kg)) %>%
+    select(-mean_size_cm)  %>%
+    tidyr::complete(year = 2010:2099, Age = 1:max_age_pop) %>%
+    group_by(year) %>%
+    tidyr::fill(mean_weight_kg , .direction = "down")  %>%
+    ungroup() %>%
     tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
     select(-year)
+
   write.table(waa,
               sep = ' ',
               paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
@@ -329,8 +332,6 @@ build_Data<-function(scenario,
               paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
                      '-wham_waa_catch.csv'),
               row.names = FALSE)
-
-
 
   #*   catch WAA ----
   #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
