@@ -61,10 +61,6 @@ build_Data<-function(scenario,
   f_rate_age <- merge(f_rate0, laa, by = 'lenbin') %>%
     select(age, mean_length = length_cm.y, length_bin = length_cm.x, f_rate = value)
 
-  # Merge df1 and df2 based on LENGTH_bin
-  merged_df <- merge(df1, df2, by.x = "LENGTH", by.y = "LENGTH_bin")
-
-
   ## mortality (year x age) ----
 
   ## don't have age-specific values so keep same
@@ -336,16 +332,11 @@ build_Data<-function(scenario,
 
 
   #*   catch WAA ----
-  #*   this needs to be interpolated because we don't have a measure of NAA in catch,
-  #*   only biomass at age, total numbers, and mean size
-  #*   estimate NAA in catch via Frate_age * NAA of the population, then divide into biomass-at-age
-  #*   to approximate the weight-at-age of a single landed fish in a given year
-  #*
-  #*   Sanity check that the derived WAA seems to return the landed biomass...
-  true_abundance <- abundance %>%
-    group_by(year,age) %>%
-    summarise(pop_naa = sum(value,na.rm = T))
-
+  #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
+  #*   and therefore can't infer WAA in the catch explicitly.
+  #*   Only have biomass-at-age, total numbers, and mean size.
+  #*   Avoid using population NAA and monkeying with selex.
+  #*   FOR NOW, assume that the catch WAA matches the population
 
   ## Summary figures ----
   #* survey figures ----
