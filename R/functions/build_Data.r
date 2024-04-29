@@ -24,9 +24,12 @@ build_Data<-function(scenario,
                      units_scalar = 1){
 
   ## string designators
-  scen <- scen
+  scen <- scenLabs2[scenario,2]
   repID2 <- repID-1
-  spname <- spname
+  spname <- sppLabs2[sppIdx,2]
+
+  file_suffix <- paste(Sys.Date(),spname,scen,repID2,sep = '-')
+
   ## where the raw evOsmose outputs are stored
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
