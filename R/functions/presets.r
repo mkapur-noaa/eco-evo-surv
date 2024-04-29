@@ -65,7 +65,7 @@ survey_array <- build_survey_array(fractional_coverage = 0.3)
 
 #* length-at-age von B pars ----
 # read.csv(parm_path, header = F) %>%
-#   filter(., grepl(paste(c('t0','lInf'), collapse="|"), V1)) %>%
+#   filter(., grepl(paste(c('t0','lInf','K'), collapse="|"), V1)) %>%
 #  mutate(sppIdxTEMP = stringr::str_extract(V1, "\\d+$"),
 #   variable = stringr::str_extract(V1, "(?<=\\.)\\w+(?=\\.)")) %>%
 # merge(., sppLabs2, by.x = 'sppIdxTEMP', by.y = 'Var3') %>%
