@@ -71,7 +71,7 @@ build_Data<-function(scenario,
     group_by(year) %>%
     summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4)) %>% ungroup()
 
-  matrix(rep(mort_csv$Mrecruits, length(1:26)), byrow=FALSE, ncol = length(1:26)) %>%
+  matrix(rep(mort_csv$Mrecruits, length(1:max_age_pop)), byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
                 sep = ' ',
                 paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_mortality.csv'),
@@ -87,7 +87,7 @@ build_Data<-function(scenario,
     group_by(year,Age) %>%
     summarise(value = round(mean(value),3)) %>% ## average maturity across year
     ungroup() %>%
-    tidyr::complete(year = 2010:2099, Age = 1:26,
+    tidyr::complete(year = 2010:2099, Age = 1:max_age_pop,
                     fill = list(value = 1)) %>%
     tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
     select(-year) %>%
@@ -108,8 +108,8 @@ build_Data<-function(scenario,
   ## need numbers ('abundance') for ages, biomass for indices
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
-  survey_selex <- if(is.null(srv_selex)) {rep(1,26)} else { 1/(1+exp(-log(19)*((1:26)-srv_selex)/(15-srv_selex)))}
-  survey_selex <- cbind(age = 1:26, slx = survey_selex)
+  survey_selex <- if(is.null(srv_selex)) {rep(1,26)} else { 1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex)))}
+  survey_selex <- cbind(age = 1:max_age_pop, slx = survey_selex)
 
   age_spatial_path <- list.files(dirtmp,
                                  pattern = paste0('spatial_abundancebyAge-',sppLabs2[sppIdx,2]),
@@ -241,7 +241,7 @@ build_Data<-function(scenario,
     merge(., results_df_age %>%
             mutate(count = round(count/units_scalar,4)) %>%
             tidyr::complete(year= 2010:2099,
-                            age = 1:26,
+                            age = 1:max_age_pop,
                             fill = list(count = -999) ) %>%
             tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
     mutate(inputN = 50) %>%
@@ -307,7 +307,7 @@ build_Data<-function(scenario,
 
   #*   population WAA ----
   ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
-  read.csv(header = T, skip = 1,
+  waa <- read.csv(header = T, skip = 1,
            list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
                       recursive = T, full.names = TRUE)[repID]) %>%
     reshape2::melt(id = c('Time','Age')) %>%
@@ -319,14 +319,20 @@ build_Data<-function(scenario,
     mutate(  mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
     mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
     select(-mean_size_cm) %>%
-    tidyr::complete(year = 2010:2099, Age = 1:26,
+    tidyr::complete(year = 2010:2099, Age = 1:max_age_pop,
                     fill = list(value = .$asymp_weight_kg)) %>%
     tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
-    select(-year) %>% View()
-  write.table(.,
+    select(-year)
+  write.table(waa,
               sep = ' ',
               paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
                      '-wham_waa_ssb.csv'),
+              row.names = FALSE)
+
+  write.table(waa,
+              sep = ' ',
+              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
+                     '-wham_waa_catch.csv'),
               row.names = FALSE)
 
 
