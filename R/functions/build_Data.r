@@ -18,7 +18,7 @@ build_Data<-function(scenario,
                      sppIdx,
                      repID = 1,
                      yrs_use = 2010:2099,
-                     srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=8)
+                     srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=11)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
                      units = 'biomass', ## units for survey observations
                      units_scalar = 1){
@@ -30,6 +30,21 @@ build_Data<-function(scenario,
   wham.dir <- here::here('outputs','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],"-",Sys.Date()))
   if(!dir.exists(wham.dir)) dir.create(wham.dir)
   # setwd(wham.dir)
+
+  ## load parameters for this species ----
+  lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
+  max_age_pop <- read.csv(here::here('outputs','wham_runs','max_age.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
+  vonBpars <- read.csv(here::here('outputs','wham_runs','vonBpars.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
+
+  #* populate length-at-age vector ----
+  laa <- NULL
+  for(a in 1:max_age_pop$value){
+    laa[a] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
+  }
+
+  ## fishing mortality x age ----
+  ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time
+  ##We  don't have Frate_age exactly, rather Frate_size so this also needs to convert on a species-basis
 
   ## mortality (year x age) ----
 
@@ -67,15 +82,45 @@ build_Data<-function(scenario,
                 row.names = FALSE)
 
 
-  ## WAA matrices (catch, discards (unused), ssb)
-  ## the WAA in the catch is given by the yield by age netcdf
-  ## the WAA used to calculate SSB is given by the size by age csvs, and the allometric w-L parameters in the model
-  lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%
-    filter(species == sppLabs2[sppIdx,2]) %>%
-    #select(-species) %>%
-    tidyr::pivot_longer(cols = -c(species0,species), names_to = 'age', values_to = 'value') %>%
-    mutate(age = as.numeric(age)) %>%
-    arrange(age)
+  ## WAA matrices ----
+
+
+  #*   population WAA ----
+  ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
+  read.csv(header = T, skip = 1,
+           list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
+                      recursive = T, full.names = TRUE)[repID]) %>%
+    reshape2::melt(id = c('Time','Age')) %>%
+    filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+    mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
+    group_by(year,Age) %>%
+    summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
+    ungroup() %>%
+    mutate(  mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
+    mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
+    select(-mean_size_cm) %>%
+    tidyr::complete(year = 2010:2099, Age = 1:26,
+                    fill = list(value = .$asymp_weight_kg)) %>%
+    tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
+    select(-year) %>% View()
+  write.table(.,
+              sep = ' ',
+              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
+                     '-wham_waa_ssb.csv'),
+              row.names = FALSE)
+
+
+
+  #*   catch WAA ----
+  #*   this needs to be interpolated because we don't have a measure of NAA in catch,
+  #*   only biomass at age, total numbers, and mean size
+  #*   estimate NAA in catch via Frate_age * NAA of the population, then divide into biomass-at-age
+  #*   to approximate the weight-at-age of a single landed fish in a given year
+  #*
+  #*   Sanity check that the derived WAA seems to return the landed biomass...
+
+
+
 
 
   ## Yield data ----
@@ -159,12 +204,12 @@ build_Data<-function(scenario,
     select(-month)
 
   # define maximum age above which all entries are NA
-  max_age <- abundance %>%
+  max_age_survey <- abundance %>%
     group_by(age) %>%
     summarise(all_zero = all(value == 0)) %>%
     filter(!all_zero) %>%
     summarise(max_age = max(age))
-  max_age <- as.numeric(max_age)
+  max_age_survey <- as.numeric(max_age)
 
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
 
@@ -237,7 +282,7 @@ build_Data<-function(scenario,
 
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
-    filter(age <= max_age)
+    filter(age <= max_age_survey)
   # mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
