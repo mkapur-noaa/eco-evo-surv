@@ -4,26 +4,53 @@
 build_WHAM <-function(scenario,
                       sppIdx,
                       repuse = 1,
-                      yrs_use = 2010:2099){
-  # create directory for analysis, E.g.,
-  write.dir <- here::here('outputs','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],"-",Sys.Date()))
-  if(!dir.exists(write.dir)) dir.create(write.dir)
-  setwd(write.dir)
+                      file_suffix  = NULL,
+                      yrs_use = 2010:2080){
 
-  # wham.dir <- find.package("wham")
-  # file.copy(from=file.path(wham.dir,"extdata","ex1_SNEMAYT.dat"), to=write.dir, overwrite=TRUE)
-    # file.copy(from=file.path(here::here('data','wham_inputs','osmose_wham_template.dat')), to=write.dir, overwrite=TRUE)
+  wham.dir <- here::here('outputs','wham_runs',file_suffix)
+
+  ## load input data ----
+  mortality <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
+  maturity <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
+  catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
+  survey <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
+  waa_catch <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
+  waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
 
 
+
+  ## load asap3 data file ----
   # copy templated asap3 data file to working directory
-  # file.copy(from=file.path(here::here('data','wham_inputs','osmose_wham_template.dat')), to=write.dir, overwrite=TRUE)
-  file.copy(from=file.path(here::here('data','wham_inputs','ex1_snemayt.dat')), to=write.dir, overwrite=TRUE)
+  file.copy(from=file.path(here::here('data','wham_inputs','osmose_wham_template.dat')),
+            to=wham.dir, overwrite=TRUE)
   # read asap3 data file and convert to input list for wham
-  # asap3 <- read_asap3_dat("osmose_wham_template.dat")
-  asap3 <- read_asap3_dat("ex1_snemayt.dat")
+  setwd(wham.dir)
+  asap3 <- read_asap3_dat("osmose_wham_template.dat") ## uncorrected template
+
+  ## populate asap3 data file ----
+  #* dimensions ----
+  asap3$dat$n_years <- nrow(maturity)
+  asap3$dat$year1 <- 2010
+  asap3$dat$n_ages <- ncol(maturity)
+  asap3$dat$n_fleets <- 1 ## one fishing fleet
+  asap3$dat$n_fleet_sel_blocks  <- 1 ## one fishing fleet
+  asap3$dat$n_indices <- 1 ## one survey fleet
+  asap3$dat$n_WAA_mats <- 2 ## SSB and catch WAA
+  asap3$dat$WAA_pointers <- c(1,2,1,2,2,2) #catch, discards, total catch, total discards, ssb, jan1bio
+
+  #* data ----
+
+  asap3$dat$maturity <- maturity
+  asap3$dat$M  <-  mortality
+  asap3$dat$WAA_mats[[1]] <- waa_catch
+  asap3$dat$WAA_mats[[2]] <- waa_ssb
+  asap3$dat$CAA_mats[[1]] <- catch_at_age
+  asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = n_years)
 
 
-  asap3$dat$n_ages <- 17
+
+
+  asap3$dat$n_ages <- max_age_pop
   asap3$dat$maturity <- matrix(0.2, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
 
 
@@ -61,35 +88,37 @@ build_WHAM <-function(scenario,
 
 
 # write.table(asap3$dat, file= "update_asap.dat")
-# write.table(matrix(0.2, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages),
-#             sep = ' ',
-#             file = here::here('data','wham_inputs','mortality_17.csv'), row.names = FALSE)
-#
-# write.table(matrix(c(asap3$dat$maturity[1,1:5], rep(0.9999, 12)),
-#                  byrow = TRUE,
-#                  nrow = asap3$dat$n_years,
-#                  ncol = asap3$dat$n_ages),
-#           sep = ' ',
-#           file = here::here('data','wham_inputs','maturity_17.csv'), row.names = FALSE)
-#
-# write.table(matrix(cbind(asap3$dat$WAA_mats[[1]],
-#                        matrix(rep(asap3$dat$WAA_mats[[1]][,6],11), ncol = 11)), ncol = asap3$dat$n_ages),
-#           sep = ' ',
-#           file = here::here('data','wham_inputs','waa_17.csv'), row.names = FALSE)
-#
-# write.table(round(matrix(byrow = TRUE, cbind(asap3$dat$CAA_mats[[1]][,1:6],
-#                        matrix(rep(asap3$dat$CAA_mats[[1]][,6],11),
-#                               byrow = TRUE,
-#                               ncol = 11),
-#                        asap3$dat$CAA_mats[[1]][,7]),
-#                    ncol = 1+asap3$dat$n_ages)),
-#
-#             sep = ' ',
-#           file = here::here('data','wham_inputs','caa_17.csv'), row.names = FALSE)
-#
-# write.table(matrix(0, ncol = 1+asap3$dat$n_ages, nrow = asap3$dat$n_years),
-#             sep = ' ',
-#           file = here::here('data','wham_inputs','discards_17.csv'), row.names = FALSE)
+#write.table(matrix(0.2, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages),
+#            sep = ' ',
+#            file = here::here('data','wham_inputs','mortality_26.csv'), row.names = FALSE)
+
+#write.table(matrix(c(asap3$dat$maturity[1,1:5], rep(0.9999, asap3$dat$n_ages-5)),
+              #   byrow = TRUE,
+      #           nrow = asap3$dat$n_years,
+   #              ncol = asap3$dat$n_ages),
+     #     sep = ' ',
+  #        file = here::here('data','wham_inputs','maturity_26.csv'), row.names = FALSE)
+
+#write.table(matrix(cbind(asap3$dat$WAA_mats[[1]],
+ #                      matrix(rep(asap3$dat$WAA_mats[[1]][,6],asap3$dat$n_ages-5),
+   #                           ncol = asap3$dat$n_ages)),
+  #                 ncol = asap3$dat$n_ages),
+   #       sep = ' ',
+ #         file = here::here('data','wham_inputs','waa_17.csv'), row.names = FALSE)
+
+#write.table(round(matrix(byrow = TRUE, cbind(asap3$dat$CAA_mats[[1]][,1:6],
+                    #   matrix(rep(asap3$dat$CAA_mats[[1]][,6],11),
+            #                  byrow = TRUE,
+                     #         ncol = 11),
+           #            asap3$dat$CAA_mats[[1]][,7]),
+         #          ncol = 1+asap3$dat$n_ages)),
+
+          #  sep = ' ',
+    ##      file = here::here('data','wham_inputs','caa_17.csv'), row.names = FALSE)
+
+#write.table(matrix(0, ncol = 1+asap3$dat$n_ages, nrow = asap3$dat$n_years),
+      #      sep = ' ',
+          #file = here::here('data','wham_inputs','discards_17.csv'), row.names = FALSE)
 #
 # asap3$dat$IAA_mats
 # asap3$dat$index_acomp_units
