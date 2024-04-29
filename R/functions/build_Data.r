@@ -76,7 +76,7 @@ build_Data<-function(scenario,
          byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_mortality.csv'),
+                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID-1,'-',scenLabs2[scenario,2],'-wham_mortality.csv'),
                 row.names = FALSE)
 
   ## maturity (year x age) ----
@@ -95,7 +95,7 @@ build_Data<-function(scenario,
     select(-year) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_maturity.csv'),
+                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID-1,'-',scenLabs2[scenario,2],'-wham_maturity.csv'),
                 row.names = FALSE)
 
   ## Survey data ----
@@ -323,13 +323,13 @@ build_Data<-function(scenario,
 
   write.table(waa,
               sep = ' ',
-              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
+              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID2,'-',scenLabs2[scenario,2],
                      '-wham_waa_ssb.csv'),
               row.names = FALSE)
 
   write.table(waa,
               sep = ' ',
-              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
+              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID2,'-',scenLabs2[scenario,2],
                      '-wham_waa_catch.csv'),
               row.names = FALSE)
 
