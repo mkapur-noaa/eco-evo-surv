@@ -82,92 +82,11 @@ build_Data<-function(scenario,
                 row.names = FALSE)
 
 
-  ## WAA matrices ----
-
-
-  #*   population WAA ----
-  ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
-  read.csv(header = T, skip = 1,
-           list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
-                      recursive = T, full.names = TRUE)[repID]) %>%
-    reshape2::melt(id = c('Time','Age')) %>%
-    filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
-    mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
-    group_by(year,Age) %>%
-    summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
-    ungroup() %>%
-    mutate(  mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
-    mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
-    select(-mean_size_cm) %>%
-    tidyr::complete(year = 2010:2099, Age = 1:26,
-                    fill = list(value = .$asymp_weight_kg)) %>%
-    tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
-    select(-year) %>% View()
-  write.table(.,
-              sep = ' ',
-              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
-                     '-wham_waa_ssb.csv'),
-              row.names = FALSE)
-
-
-
-  #*   catch WAA ----
-  #*   this needs to be interpolated because we don't have a measure of NAA in catch,
-  #*   only biomass at age, total numbers, and mean size
-  #*   estimate NAA in catch via Frate_age * NAA of the population, then divide into biomass-at-age
-  #*   to approximate the weight-at-age of a single landed fish in a given year
-  #*
-  #*   Sanity check that the derived WAA seems to return the landed biomass...
 
 
 
 
 
-  ## Yield data ----
-  ## strip and format catches (want yr x Age, outputs are spp x Age x timestep)
-  yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
-  yield_path <-   list.files(dirtmp,
-                             pattern = paste0('ns_yieldDistribByAge*'),
-                             recursive = T,
-                             full.names = TRUE)[repID]
-
-  repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
-
-  yield0 <- ncvar_get(nc_open(yield_path),"biomass")
-
-  yield1 <- reshape2::melt(yield0) %>%
-    mutate(year = 2010 + (Var3 - 1) %/% 24,
-           month = ((Var3 - 1) %% 24) %/% 2 + 1) %>%
-    filter(Var1 == sppIdx) %>%
-    select(year, age = Var2, value) %>%
-    group_by(year,age) %>%
-    summarise(value = sum(value)) %>%
-    ungroup()
-
-  # define maximum age above which all entries are NA or zero
-  # this might need to be 26 or the population max age, no matter waht
-  max_age_catch <- yield1 %>%
-    group_by(age) %>%
-    summarise(all_zero = all(value == 0)) %>%
-    filter(!all_zero) %>%
-    summarise(max_age = max(age))
-  max_age_catch <- as.numeric(max_age_catch)
-
-  yield1 %>%
-    ## truncate age-zeros and max ages
-    mutate(value = case_when(age == 1 ~ -999,
-                             age >= max_age_catch  ~ -999,
-                             age < max_age_catch ~ round(value))) %>%
-    tidyr::pivot_wider(names_from = age, values_from = value) %>%
-    select(-year) %>%
-
-    # save the results
-    write.table(.,
-                sep = ' ',
-                paste0(wham.dir,"/",sppLabs2[sppIdx,2],
-                       '-rep',repID2,'-',Sys.Date(),
-                       '-wham_catch_at_age.csv'),
-                row.names = FALSE)
 
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
@@ -322,7 +241,92 @@ build_Data<-function(scenario,
               row.names = FALSE)
 
 
-  ## summary figures
+  ## Yield data ----
+  ## strip and format catches (want yr x Age, outputs are spp x Age x timestep)
+  yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
+  yield_path <-   list.files(dirtmp,
+                             pattern = paste0('ns_yieldDistribByAge*'),
+                             recursive = T,
+                             full.names = TRUE)[repID]
+
+  repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
+
+  yield0 <- ncvar_get(nc_open(yield_path),"biomass")
+
+  yield1 <- reshape2::melt(yield0) %>%
+    mutate(year = 2010 + (Var3 - 1) %/% 24,
+           month = ((Var3 - 1) %% 24) %/% 2 + 1) %>%
+    filter(Var1 == sppIdx) %>%
+    select(year, age = Var2, value) %>%
+    group_by(year,age) %>%
+    summarise(value = sum(value)) %>%
+    ungroup()
+
+  # define maximum age above which all entries are NA or zero
+  # this might need to be 26 or the population max age, no matter waht
+  max_age_catch <- yield1 %>%
+    group_by(age) %>%
+    summarise(all_zero = all(value == 0)) %>%
+    filter(!all_zero) %>%
+    summarise(max_age = max(age))
+  max_age_catch <- as.numeric(max_age_catch)
+
+  yield1 %>%
+    ## truncate age-zeros and max ages
+    mutate(value = case_when(age == 1 ~ -999,
+                             age >= max_age_catch  ~ -999,
+                             age < max_age_catch ~ round(value))) %>%
+    tidyr::pivot_wider(names_from = age, values_from = value) %>%
+    select(-year) %>%
+
+    # save the results
+    write.table(.,
+                sep = ' ',
+                paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+                       '-rep',repID2,'-',Sys.Date(),
+                       '-wham_catch_at_age.csv'),
+                row.names = FALSE)
+
+  ## WAA matrices ----
+
+
+  #*   population WAA ----
+  ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
+  read.csv(header = T, skip = 1,
+           list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
+                      recursive = T, full.names = TRUE)[repID]) %>%
+    reshape2::melt(id = c('Time','Age')) %>%
+    filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+    mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
+    group_by(year,Age) %>%
+    summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
+    ungroup() %>%
+    mutate(  mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
+    mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
+    select(-mean_size_cm) %>%
+    tidyr::complete(year = 2010:2099, Age = 1:26,
+                    fill = list(value = .$asymp_weight_kg)) %>%
+    tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
+    select(-year) %>% View()
+  write.table(.,
+              sep = ' ',
+              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],
+                     '-wham_waa_ssb.csv'),
+              row.names = FALSE)
+
+
+
+  #*   catch WAA ----
+  #*   this needs to be interpolated because we don't have a measure of NAA in catch,
+  #*   only biomass at age, total numbers, and mean size
+  #*   estimate NAA in catch via Frate_age * NAA of the population, then divide into biomass-at-age
+  #*   to approximate the weight-at-age of a single landed fish in a given year
+  #*
+  #*   Sanity check that the derived WAA seems to return the landed biomass...
+
+
+  ## Summary figures ----
+  #* survey figures ----
   ## maps of true biomass thru time
   map <- biomass %>%
     #group_by(lat, long) %>%
