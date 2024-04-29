@@ -79,8 +79,8 @@ build_Data<-function(scenario,
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
     group_by(year) %>%
-    summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4)) %>% ungroup()
-
+    summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4)) %>%
+    ungroup()
   matrix(rep(mort_csv$Mrecruits, length(1:max_age_pop)),
          byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
@@ -290,7 +290,7 @@ build_Data<-function(scenario,
   yield1 %>%
     filter(age <= max_age_pop) %>%
     ## truncate age-zeros and max ages
-    mutate(value = case_when(age == 1 ~ -999,
+    mutate(value = case_when(age == 1 ~ 0,
                              # age >= max_age_catch  ~ -999,
                              age <= max_age_catch ~ round(value))) %>%
     tidyr::pivot_wider(names_from = age, values_from = value) %>%
