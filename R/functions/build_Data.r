@@ -43,23 +43,24 @@ build_Data<-function(scenario,
     laa[a,'length_cm'] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
   }
 
+  max_age_pop <- as.numeric(max_age_pop$value)
 
   ## fishing mortality x age ----
   ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time, so just take first row
   ## Don't have Frate_age exactly, rather Frate_size so this also needs to convert on a species-basis
   ## it is only saved ONCE under cc-evo
-  f_rate0 <- read.csv(paste0(dirname(dirname(dirtmp)),'/cc_evo',
-           '/fishing_rate',"/mortality.fishing.rate.byDt.bySize.file.sp",sppIdx-1,".csv"),
-           nrows = 1, header = T)[,-1] %>%
-    reshape2::melt() %>%
-    mutate(length_cm = as.numeric(stringr::str_replace(variable, "X", "")))
-
-  f_rate0$lenbin <- cut(f_rate0$length_cm, breaks = seq(-0.001, max(f_rate0$length_cm),0.5), right = TRUE)
-
-  laa$lenbin <- cut(laa$length_cm, breaks = seq(-0.001, max(f_rate0$length_cm),0.5), right = TRUE)
-
-  f_rate_age <- merge(f_rate0, laa, by = 'lenbin') %>%
-    select(age, mean_length = length_cm.y, length_bin = length_cm.x, f_rate = value)
+  # f_rate0 <- read.csv(paste0(dirname(dirname(dirtmp)),'/cc_evo',
+  #          '/fishing_rate',"/mortality.fishing.rate.byDt.bySize.file.sp",sppIdx-1,".csv"),
+  #          nrows = 1, header = T)[,-1] %>%
+  #   reshape2::melt() %>%
+  #   mutate(length_cm = as.numeric(stringr::str_replace(variable, "X", "")))
+  #
+  # f_rate0$lenbin <- cut(f_rate0$length_cm, breaks = seq(-0.001, max(f_rate0$length_cm),0.5), right = TRUE)
+  #
+  # laa$lenbin <- cut(laa$length_cm, breaks = seq(-0.001, max(f_rate0$length_cm),0.5), right = TRUE)
+  #
+  # f_rate_age <- merge(f_rate0, laa, by = 'lenbin') %>%
+  #   select(age, mean_length = length_cm.y, length_bin = length_cm.x, f_rate = value)
 
   ## mortality (year x age) ----
 
@@ -71,7 +72,8 @@ build_Data<-function(scenario,
     group_by(year) %>%
     summarise(Frecruits = round(sum(V12),4), Mrecruits = round(sum(V18),4)) %>% ungroup()
 
-  matrix(rep(mort_csv$Mrecruits, length(1:max_age_pop)), byrow=FALSE, ncol = length(1:max_age_pop)) %>%
+  matrix(rep(mort_csv$Mrecruits, length(1:max_age_pop)),
+         byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
                 sep = ' ',
                 paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_mortality.csv'),
@@ -96,19 +98,12 @@ build_Data<-function(scenario,
                 paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],'-wham_maturity.csv'),
                 row.names = FALSE)
 
-
-
-
-
-
-
-
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
   ## need numbers ('abundance') for ages, biomass for indices
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
-  survey_selex <- if(is.null(srv_selex)) {rep(1,26)} else { 1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex)))}
+  survey_selex <- if(is.null(srv_selex)) {rep(1,max_age_pop)} else { 1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex)))}
   survey_selex <- cbind(age = 1:max_age_pop, slx = survey_selex)
 
   age_spatial_path <- list.files(dirtmp,
@@ -131,7 +126,7 @@ build_Data<-function(scenario,
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
     select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
-    filter(month == 7 & year %in% yrs_use) %>%
+    filter(month == 7 & year %in% yrs_use) %>% ## July survey
     group_by(year, age, lat, long, month) %>%
     summarise(value = mean(value)) %>% ## average over the month
     ungroup() %>%
@@ -143,22 +138,21 @@ build_Data<-function(scenario,
     summarise(all_zero = all(value == 0)) %>%
     filter(!all_zero) %>%
     summarise(max_age = max(age))
-  max_age_survey <- as.numeric(max_age)
+  max_age_survey <- as.numeric(max_age_survey)
 
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
 
-  biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass") ## this might need to switch with units_use
+  biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
   biomass <- reshape2::melt(biomass0) %>%
     filter(!is.na(value)) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
     select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
-    filter(month == 7 & year %in% yrs_use) %>%
+    filter(month == 7 & year %in% yrs_use) %>% ## July survey
     group_by(year, age, lat, long, month) %>%
     summarise(value = mean(value)) %>% ## average over the month
     ungroup() %>%
     select(-month)
-
 
   # Initialize an empty list to store the results
   results_age <- results_index <- list()
@@ -216,8 +210,8 @@ build_Data<-function(scenario,
 
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
-    filter(age <= max_age_survey)
-  # mutate(count = ifelse(age <= max_age, count, -999)) ## blank data for unused ages
+   filter(age <= max_age_survey)
+  #mutate(count = ifelse(age <= max_age_pop, count, -999)) ## blank data for unused ages
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
   results_df_age <- results_df_age_spatial %>%
@@ -270,27 +264,28 @@ build_Data<-function(scenario,
 
   yield1 <- reshape2::melt(yield0) %>%
     mutate(year = 2010 + (Var3 - 1) %/% 24,
-           month = ((Var3 - 1) %% 24) %/% 2 + 1) %>%
+           month = ((Var3 - 1) %% 24) %/% 2 + 1,
+           age = ifelse(Var2 >= max_age_pop,max_age_pop,Var2)) %>%
     filter(Var1 == sppIdx) %>%
-    select(year, age = Var2, value) %>%
+    select(year, age, value) %>%
     group_by(year,age) %>%
     summarise(value = sum(value)) %>%
     ungroup()
 
   # define maximum age above which all entries are NA or zero
-  # this might need to be 26 or the population max age, no matter what
-  max_age_catch <- yield1 %>%
-    group_by(age) %>%
-    summarise(all_zero = all(value == 0)) %>%
-    filter(!all_zero) %>%
-    summarise(max_age = max(age))
-  max_age_catch <- as.numeric(max_age_catch)
+  # max_age_catch <- yield1 %>%
+  #   group_by(age) %>%
+  #   summarise(all_zero = all(value == 0)) %>%
+  #   filter(!all_zero) %>%
+  #   summarise(max_age = max(age))
+  # max_age_catch <- ifelse(as.numeric(max_age_catch)>max_age_pop,max_age_pop,as.numeric(max_age_catch))
 
   yield1 %>%
+    filter(age <= max_age_pop) %>%
     ## truncate age-zeros and max ages
     mutate(value = case_when(age == 1 ~ -999,
-                             age >= max_age_catch  ~ -999,
-                             age < max_age_catch ~ round(value))) %>%
+                             # age >= max_age_catch  ~ -999,
+                             age <= max_age_catch ~ round(value))) %>%
     tidyr::pivot_wider(names_from = age, values_from = value) %>%
     select(-year) %>%
 
