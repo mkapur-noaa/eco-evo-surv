@@ -23,18 +23,25 @@ build_Data<-function(scenario,
                      units = 'biomass', ## units for survey observations
                      units_scalar = 1){
 
+  ## string designators
+  scen <- scen
+  repID2 <- repID-1
+  spname <- spname
   ## where the raw evOsmose outputs are stored
-  dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scenLabs2[scenario,2],'/output')
+  dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
   ## where the WHAM outputs are to be stored
-  wham.dir <- here::here('outputs','wham_runs',paste0(sppLabs2[sppIdx,2],'-rep',repID,'-',scenLabs2[scenario,2],"-",Sys.Date()))
+  wham.dir <- here::here('outputs','wham_runs',paste0(spname,'-rep',repID2,'-',scen,"-",Sys.Date()))
   if(!dir.exists(wham.dir)) dir.create(wham.dir)
+
+  ##
+
   # setwd(wham.dir)
 
   ## load parameters for this species ----
-  lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
-  max_age_pop <- read.csv(here::here('outputs','wham_runs','max_age.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
-  vonBpars <- read.csv(here::here('outputs','wham_runs','vonBpars.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
+  lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
+  max_age_pop <- read.csv(here::here('outputs','wham_runs','max_age.csv')) %>%  filter(species == spname)
+  vonBpars <- read.csv(here::here('outputs','wham_runs','vonBpars.csv')) %>%  filter(species == spname)
 
   #* populate length-at-age vector
   laa <- data.frame(length_cm = NA, age = NA, len_bin = NA)
@@ -66,7 +73,7 @@ build_Data<-function(scenario,
 
   ## don't have age-specific values so keep same
 
-  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',sppLabs2[sppIdx,2],"_Simu",repID,".csv")
+  mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',spname,"_Simu",repID,".csv")
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
     group_by(year) %>%
@@ -76,7 +83,7 @@ build_Data<-function(scenario,
          byrow=FALSE, ncol = length(1:max_age_pop)) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID-1,'-',scenLabs2[scenario,2],'-wham_mortality.csv'),
+                paste0(wham.dir,"/",spname,'-rep',repID-1,'-',scen,'-wham_mortality.csv'),
                 row.names = FALSE)
 
   ## maturity (year x age) ----
@@ -84,7 +91,7 @@ build_Data<-function(scenario,
   mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repID,".csv")
   read.csv(mat_path, skip = 1, header = T) %>%
     reshape2::melt(id = c('Time','Age')) %>%
-    filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+    filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
     mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
     group_by(year,Age) %>%
     summarise(value = round(mean(value),3)) %>% ## average maturity across year
@@ -95,7 +102,7 @@ build_Data<-function(scenario,
     select(-year) %>%
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID-1,'-',scenLabs2[scenario,2],'-wham_maturity.csv'),
+                paste0(wham.dir,"/",spname,'-rep',repID-1,'-',scen,'-wham_maturity.csv'),
                 row.names = FALSE)
 
   ## Survey data ----
@@ -107,11 +114,11 @@ build_Data<-function(scenario,
   survey_selex <- cbind(age = 1:max_age_pop, slx = survey_selex)
 
   age_spatial_path <- list.files(dirtmp,
-                                 pattern = paste0('spatial_abundancebyAge-',sppLabs2[sppIdx,2]),
+                                 pattern = paste0('spatial_abundancebyAge-',spname),
                                  recursive = T,
                                  full.names = TRUE)[repID]
   biom_spatial_path <- list.files(dirtmp,
-                                  pattern = paste0('spatial_biomassbyAge-',sppLabs2[sppIdx,2]),
+                                  pattern = paste0('spatial_biomassbyAge-',spname),
                                   recursive = T,
                                   full.names = TRUE)[repID]
 
@@ -189,7 +196,7 @@ build_Data<-function(scenario,
         abund_cv = abund_se/abund_mean
       ) %>%
       select(-term1, -term2) %>%
-      mutate(year = timestep, replicate = repID2, scenario = scenario, species = sppLabs2[sppIdx,2])
+      mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
 
     results_index[[paste(timestep)]] <- survey_biomass
 
@@ -244,7 +251,7 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-              paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+              paste0(wham.dir,"/",spname,
                      '-rep',repID2,'-',Sys.Date(),
                      '-wham_survey.csv'),
               row.names = FALSE)
@@ -292,7 +299,7 @@ build_Data<-function(scenario,
     # save the results
     write.table(.,
                 sep = ' ',
-                paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+                paste0(wham.dir,"/",spname,
                        '-rep',repID2,'-',Sys.Date(),
                        '-wham_catch_at_age.csv'),
                 row.names = FALSE)
@@ -306,7 +313,7 @@ build_Data<-function(scenario,
            list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
                       recursive = T, full.names = TRUE)[repID]) %>%
     reshape2::melt(id = c('Time','Age')) %>%
-    filter(variable == sppLabs2[sppIdx,2] & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+    filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
     mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
     group_by(year,Age) %>%
     summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
@@ -323,13 +330,13 @@ build_Data<-function(scenario,
 
   write.table(waa,
               sep = ' ',
-              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID2,'-',scenLabs2[scenario,2],
+              paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,
                      '-wham_waa_ssb.csv'),
               row.names = FALSE)
 
   write.table(waa,
               sep = ' ',
-              paste0(wham.dir,"/",sppLabs2[sppIdx,2],'-rep',repID2,'-',scenLabs2[scenario,2],
+              paste0(wham.dir,"/",spname,'-rep',repID2,'-',scen,
                      '-wham_waa_catch.csv'),
               row.names = FALSE)
 
@@ -419,7 +426,7 @@ build_Data<-function(scenario,
 
 
 
-  png(file = paste0(wham.dir,"/",sppLabs2[sppIdx,2],
+  png(file = paste0(wham.dir,"/",spname,
                     '-rep',repID2,'-',Sys.Date(),
                     '-input_data.png'),
       height = 5, width = 12, unit = 'in',res = 520)
@@ -428,8 +435,8 @@ build_Data<-function(scenario,
   dev.off()
 
 
-  cat('Built data and summary figures for',paste0(sppLabs2[sppIdx,2],
-                                                  ' ',scenLabs2[scenario,2],' replicate ',
+  cat('Built data and summary figures for',paste0(spname,
+                                                  ' ',scen,' replicate ',
                                                   repID2))
 
 }
