@@ -36,15 +36,34 @@ build_Data<-function(scenario,
   max_age_pop <- read.csv(here::here('outputs','wham_runs','max_age.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
   vonBpars <- read.csv(here::here('outputs','wham_runs','vonBpars.csv')) %>%  filter(species == sppLabs2[sppIdx,2])
 
-  #* populate length-at-age vector ----
-  laa <- NULL
+  #* populate length-at-age vector
+  laa <- data.frame(length_cm = NA, age = NA, len_bin = NA)
   for(a in 1:max_age_pop$value){
-    laa[a] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
+    laa[a,'age'] <- a
+    laa[a,'length_cm'] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
   }
 
+
   ## fishing mortality x age ----
-  ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time
-  ##We  don't have Frate_age exactly, rather Frate_size so this also needs to convert on a species-basis
+  ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time, so just take first row
+  ## Don't have Frate_age exactly, rather Frate_size so this also needs to convert on a species-basis
+  ## it is only saved ONCE under cc-evo
+  f_rate0 <- read.csv(paste0(dirname(dirname(dirtmp)),'/cc_evo',
+           '/fishing_rate',"/mortality.fishing.rate.byDt.bySize.file.sp",sppIdx-1,".csv"),
+           nrows = 1, header = T)[,-1] %>%
+    reshape2::melt() %>%
+    mutate(length_cm = as.numeric(stringr::str_replace(variable, "X", "")))
+
+  f_rate0$lenbin <- cut(f_rate0$length_cm, breaks = seq(-0.001, max(f_rate0$length_cm),0.5), right = TRUE)
+
+  laa$lenbin <- cut(laa$length_cm, breaks = seq(-0.001, max(f_rate0$length_cm),0.5), right = TRUE)
+
+  f_rate_age <- merge(f_rate0, laa, by = 'lenbin') %>%
+    select(age, mean_length = length_cm.y, length_bin = length_cm.x, f_rate = value)
+
+  # Merge df1 and df2 based on LENGTH_bin
+  merged_df <- merge(df1, df2, by.x = "LENGTH", by.y = "LENGTH_bin")
+
 
   ## mortality (year x age) ----
 
@@ -263,7 +282,7 @@ build_Data<-function(scenario,
     ungroup()
 
   # define maximum age above which all entries are NA or zero
-  # this might need to be 26 or the population max age, no matter waht
+  # this might need to be 26 or the population max age, no matter what
   max_age_catch <- yield1 %>%
     group_by(age) %>%
     summarise(all_zero = all(value == 0)) %>%
@@ -323,6 +342,9 @@ build_Data<-function(scenario,
   #*   to approximate the weight-at-age of a single landed fish in a given year
   #*
   #*   Sanity check that the derived WAA seems to return the landed biomass...
+  true_abundance <- abundance %>%
+    group_by(year,age) %>%
+    summarise(pop_naa = sum(value,na.rm = T))
 
 
   ## Summary figures ----
@@ -350,13 +372,13 @@ build_Data<-function(scenario,
     facet_wrap(~year, ncol = 2)
 
   ## survey index data
-  true_abund <- biomass %>%
+  true_biomass <- biomass %>%
     group_by(year) %>%
     summarise(abund_mean=sum(value,na.rm = T)) %>%
     ungroup() %>%
     mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)))
 
-  true_b <- ggplot(true_abund, aes(x = year, y =abund_mean_rescale)) +
+  true_b <- ggplot(true_biomass, aes(x = year, y =abund_mean_rescale)) +
     geom_line(color = scenLabs2[scenario,'Pal'])+
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     labs(x = 'Year', y = paste0('True Abundance ',
