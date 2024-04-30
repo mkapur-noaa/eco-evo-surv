@@ -32,13 +32,9 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
-# foreach(ff = 1:nrow(F0_sim)) %:%
-#   #   foreach(s = 1) %dopar%
-# foreach(scenario=1:4) %dopar% {
-#   for(species in c(sppLabs2$Var3[sppLabs2$Var4]+1)) {
-foreach(scenario=2) %:%
+foreach(scenario=1:4) %:%
   foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
-  foreach(replicate=4:6)  %dopar%  {
+  foreach(replicate=1:5)  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
     scen_use = scenario; sp_use = species; replicate_use = replicate
@@ -68,3 +64,6 @@ foreach(files_to_run) %dopar% {
 
 
 ## Summarize results across all species, scenarios, simulations ----
+
+list.files(here::here('outputs','wham_runs'), pattern = 'true_biomass.csv', recursive = TRUE, full.names = TRUE)[1:10] %>%
+  lapply(., FUN = read.csv) %>% bind_rows() %>% head()
