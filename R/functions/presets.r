@@ -43,7 +43,8 @@ sppLabs2 <- cbind(Var1 = sppLabs, Var2=names(sppLabs), Var3 = 0:(length(sppLabs)
 
 ## color palettes ----
 scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: reds have climate change, blues do not
-scenLabs2 <- cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal))
+
+scenLabs2 <- data.frame(cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal)))
 sppPal <- gplots::rich.colors(n = 13)
 
 survey_array <- build_survey_array(fractional_coverage = 0.3)
