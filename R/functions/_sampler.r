@@ -23,25 +23,23 @@ build_survey_array <- function(n_years = length(2010:2099), fractional_coverage 
 }
 
 # A function that samples a station for abundance (biomass or numbers) and age comps
-sample_ages <- function(df, timestep, long, lat) {
+sample_ages <- function(df = cell_data, timestep=2010, long, lat) {
   # Exclude NAs
   # df <- df[!is.na(df$value), ]
 
   # If there are no positive values, return a data frame with zero counts for all age groups
   if (all(df$value <= 0) | nrow(df) == 0){
    return(data.frame(timestep = timestep, long = long, lat = lat,
-   age = 1:26, count =0))
+   age = 1:max_age_pop, count =0))
   }
 
   ##
   # Calculate the proportions of each age group
   props <- df$value/ sum(df$value)
 
-
-
   # Create a data frame with zero counts for all age groups
   result <- data.frame(timestep = timestep, long = long, lat = lat,
-                       age = 1:max(df$age), count = integer(max(df$age)))
+                       age = 1:max_age_pop, count = integer(max(df$age)))
 
   # Sample 500 individuals using a multinomial distribution & apply selex
   # Fill in the sampled counts for the age groups that were present in the input data
