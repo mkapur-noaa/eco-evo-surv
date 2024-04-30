@@ -1,10 +1,7 @@
 ## build_WHAM.R
 ## script to take formatted data and build, execute WHAM input files
 
-run_WHAM <-function(scenario,
-                      sppIdx,
-                      repID = 1,
-                      yrs_use = 2010:2099, ## years to run the assessment
+run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                       file_suffix = NULL
                    ){
 
