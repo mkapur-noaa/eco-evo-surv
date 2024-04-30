@@ -38,7 +38,11 @@ sppLabs <-c("Atlantic Herring" , "Atlantic Mackerel" ,"Sandeel" ,"European Sprat
 "Whiting","Common Dab","Grey Gurnard" ,"Hake","Shrimp")
 #names(sppLabs) <- as.character(0:15)
 names(sppLabs) <- gsub(" ","",sppLabs)
-sppLabs2 <- cbind(Var1 = sppLabs, Var2=names(sppLabs), Var3 = 0:(length(sppLabs)-1))
+sppLabs2 <- data.frame(Var1 = sppLabs,
+                  Var2=names(sppLabs),
+                  Var3 = 0:(length(sppLabs)-1),
+                  Var4 = FALSE)
+sppLabs2$Var4[sppLabs2$Var3%in%c(0,3,8)] <- TRUE ## indicate spp of interest
 
 
 ## color palettes ----
