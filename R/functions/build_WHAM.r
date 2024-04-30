@@ -5,7 +5,7 @@ build_WHAM <-function(scenario,
                       sppIdx,
                       repuse = 1,
                       file_suffix  = NULL,
-                      yrs_use = 2010:2080){
+                      yrs_use = 2010:2099){
 
   wham.dir <- here::here('outputs','wham_runs',file_suffix)
 
@@ -13,10 +13,10 @@ build_WHAM <-function(scenario,
   mortality <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
   catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
-  survey <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
+  survey <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
+  # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
   waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
-
 
 
   ## load asap3 data file ----
@@ -28,8 +28,9 @@ build_WHAM <-function(scenario,
   asap3 <- read_asap3_dat("osmose_wham_template.dat") ## uncorrected template
 
   ## populate asap3 data file ----
-  #* dimensions ----
+  #* dimensions and spex ----
   asap3$dat$n_years <- nrow(maturity)
+  asap3$dat$nfinalyear <- max(yrs_use)
   asap3$dat$year1 <- 2010
   asap3$dat$n_ages <- ncol(maturity)
   asap3$dat$n_fleets <- 1 ## one fishing fleet
@@ -37,21 +38,32 @@ build_WHAM <-function(scenario,
   asap3$dat$n_indices <- 1 ## one survey fleet
   asap3$dat$n_WAA_mats <- 2 ## SSB and catch WAA
   asap3$dat$WAA_pointers <- c(1,2,1,2,2,2) #catch, discards, total catch, total discards, ssb, jan1bio
+  asap3$dat$index_units <- 1 ## 1 = biomass, 2 = numbers
+  asap3$dat$index_acomp_units <- 2
+  asap3$dat$index_month <- 7
+  asap3$dat$use_index_acomp <- 1
+  asap3$dat$use_index <- 1
+
+  #* initial pars ----
+  ## asap3$dat$N1_ini <- exp(-)
+  ## asap3$dat$F1_ini
 
   #* data ----
+  asap3$dat$maturity <- as.matrix(maturity)
+  asap3$dat$M  <-  as.matrix(mortality)
+  asap3$dat$WAA_mats[[1]] <- as.matrix(waa_catch)
+  asap3$dat$WAA_mats[[2]] <- as.matrix(waa_ssb)
+  asap3$dat$CAA_mats[[1]] <- as.matrix(catch_at_age)
+  asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
+  asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
+  # asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
+  asap3$dat$catch_cv <- matrix(0.1, nrow = asap3$dat$n_years)
+  asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
 
-  asap3$dat$maturity <- maturity
-  asap3$dat$M  <-  mortality
-  asap3$dat$WAA_mats[[1]] <- waa_catch
-  asap3$dat$WAA_mats[[2]] <- waa_ssb
-  asap3$dat$CAA_mats[[1]] <- catch_at_age
-  asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = n_years)
 
-
-
-
-  asap3$dat$n_ages <- max_age_pop
-  asap3$dat$maturity <- matrix(0.2, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
+  #* selex ----
+  # asap3$dat$n_ages <- max_age_pop
+  # asap3$dat$maturity <- matrix(0.2, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
 
 
   input1 <- prepare_wham_input(asap3,
