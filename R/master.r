@@ -40,13 +40,14 @@ foreach(scenario=1:4)%:%
 stopImplicitCluster()
 # stopCluster()
 
-## Run WHAM models ----
+## Run WHAM model(s) ----
+## list all the folders with outputs; can grep() or select from here
 files_to_run <-   list.dirs(path = here::here('outputs','wham_runs'),recursive = FALSE)
 
 foreach(files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
   run_WHAM(yrs_use = 2010:2099, ## years to run the assessment
-           file_suffix = files_to_run)
+           file_suffix = basename(files_to_run[2]))
 } ## end files loop
 
 
