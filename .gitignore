@@ -1,8 +1,10 @@
 MixFishSim/
 *jkbest2
+*dep
 *chukchi*
 *figs*
 *data/*
 .Rproj.user
+*wham_runs*
 .Rhistory
 .RDataTmp
