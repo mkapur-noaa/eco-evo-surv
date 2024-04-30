@@ -113,10 +113,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
            lower = ssb_est - ssb_est*ssb_est_cv,
            upper = ssb_est + ssb_est*ssb_est_cv,
            MRE = (ssb_est-abund_mean)/abund_mean,
-           MRE_scaled = 100*MRE,
-           replicate = repID2,
-           scenario = scen,
-           species = spname)
+           MRE_scaled = 100*MRE)
 
   ssb_compare <-  mre_table %>%
     select(year, abund_mean, ssb_est, lower, upper) %>%
