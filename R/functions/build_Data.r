@@ -59,9 +59,9 @@ build_Data<-function(scenario,
   #* unfished NAA (for N1_ini) ----
   ## ballpark from earlier runs
   age_spatial_nofish_path <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/one_sim_without_fishing",
-                             "/ns_spatial_abundancebyAge-",spname,"_Simu0.nc")
+                                    "/ns_spatial_abundancebyAge-",spname,"_Simu0.nc")
   abundance_nofish <- ncvar_get(nc_open(age_spatial_nofish_path),"abundance") ## this might need to switch with units_use
- reshape2::melt(abundance_nofish) %>%
+  reshape2::melt(abundance_nofish) %>%
     filter(!is.na(value)) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
@@ -70,12 +70,12 @@ build_Data<-function(scenario,
     group_by(age) %>%
     summarise(value = mean(value)) %>% ## average
     ungroup() %>%
-   filter(age <= max_age_pop) %>%
-   t() %>%
-   write.table(.,
-               sep = ' ',
-               paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),
-               row.names = FALSE)
+    filter(age <= max_age_pop) %>%
+    t() %>%
+    write.table(.,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),
+                row.names = FALSE)
 
 
 
@@ -143,8 +143,8 @@ build_Data<-function(scenario,
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
   ## need numbers ('abundance') for ages, biomass for indices
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
-
-  survey_selex <- if(is.null(srv_selex)) {
+  #* survey selectivity ----
+  survey_selex <<- if(is.null(srv_selex)) {
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
   } else {
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex))))
