@@ -20,9 +20,9 @@ build_WHAM <-function(scenario,
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
   waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
   N_init <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),  skip = 1)[2,]
+  true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix,'-true_biomass.csv'))
 
-
-  ## load asap3 data file ----
+  ## load asap3-style data file ----
   # copy templated asap3 data file to working directory
   file.copy(from=file.path(here::here('data','wham_inputs','osmose_wham_template.dat')),
             to=wham.dir, overwrite=TRUE)
@@ -99,6 +99,49 @@ build_WHAM <-function(scenario,
   # WHAM output plots for best model with projections
   plot_wham_output(mod=m1,res = 250, dir.main = wham.dir) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
+
+  # calculate MRE, save figure and table
+  std <- summary(mod$sdrep)
+  ssb.ind <- which(rownames(std) == "log_SSB")[1:length(m1$years)]
+
+  mre_table <- true_biomass[1:length(m1$years),] %>%
+    mutate(ssb_est = exp(std[ssb.ind, 1]) ,
+           ssb_est_cv = std[ssb.ind, 2],
+           lower = ssb_est - ssb_est*ssb_est_cv,
+           upper = ssb_est + ssb_est*ssb_est_cv,
+           MRE = (ssb_est-abund_mean)/abund_mean,
+           MRE_scaled = 100*MRE,
+           replicate = repID2,
+           scenario = scen,
+           species = spname)
+
+ ssb_compare <-  mre_table %>%
+    select(year, abund_mean, ssb_est, lower, upper) %>%
+    reshape2::melt(id = c('year','lower','upper')) %>%
+    ggplot(., aes(x = year, y = value/1e3, color = variable)) +
+    geom_line() +
+    geom_ribbon(alpha = 0.2, aes(ymin = lower/1e3, ymax = upper/1e3),
+                color = NA,
+                fill = 'grey22')+
+    scale_color_manual(values = c(scenLabs2$Pal[scenLabs2$Var2 == scen] ,
+                                  'grey22'),
+                       labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
+    labs(x = 'Assessment Year', y = 'SSB (kmt)') +
+    theme(legend.position = c(0.8,0.8)) +
+    labs(color = '')
+
+ mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
+    geom_line() +
+    scale_y_continuous(limits = c(-50,50)) +
+    labs(x = 'Assessment Year', y = 'MRE SSB, %')+
+    geom_hline(yintercept = 0, color = 'pink')
+
+  write.csv(mre_table,paste0(wham.dir,"/",file_suffix,"-ssb_mre.csv"), row.names = FALSE)
+
+  png(file =  paste0(wham.dir,'/plots_png','/results','/ssb_mre.png'),
+      height = 5, width = 12, unit = 'in',res = 520)
+  Rmisc::multiplot(ssb_compare, mre, cols = 2)
+  dev.off()
 
 
 }
