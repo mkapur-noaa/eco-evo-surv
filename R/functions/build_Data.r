@@ -182,9 +182,21 @@ build_Data<-function(scenario,
   max_age_survey <- as.numeric(max_age_survey)
 
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
+  biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
+  biomass <- reshape2::melt(biomass0) %>%
+    filter(!is.na(value)) %>% ## drop land
+    mutate(year = 2010 + (Var4 - 1) %/% 24,
+           month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
+    select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+    filter(month == 7 & year %in% yrs_use) %>% ## July survey
+    group_by(year, age, lat, long, month) %>%
+    summarise(value = mean(value)) %>% ## average over the month
+    ungroup() %>%
+    select(-month)
 
   # Initialize an empty list to store the results
   results_age <- results_index <- list()
+
 
   # For each timestep
   for (timestep in unique(abundance$year)) {
