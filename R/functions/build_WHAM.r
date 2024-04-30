@@ -19,6 +19,7 @@ build_WHAM <-function(scenario,
   # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
   waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
+  N_init <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),  skip = 1)[2,]
 
 
   ## load asap3 data file ----
@@ -47,7 +48,7 @@ build_WHAM <-function(scenario,
   asap3$dat$use_index <- 1
 
   #* initial pars ----
-  # asap3$dat$N1_ini <- exp(-mortality)
+  asap3$dat$N1_ini <- N_init
   ## asap3$dat$F1_ini
 
   #* data ----
@@ -64,19 +65,21 @@ build_WHAM <-function(scenario,
 
 
   #* selex ----
-
-
+  #* no time blocks on selex, no random effects
+  #* fishery selex is age specific
+  #* survey selex is logistic
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2,
                                model_name=file_suffix,
-                               selectivity=list(model=rep("age-specific",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                               selectivity=list(model=c('logistic','logistic'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(c(rep(0.5,17)),
-                                                                  c(rep(0.5,17))),
-                                                fix_pars=list(4:5,2:4)), ## list of length = number of sel blocks
+                                                initial_pars=list(c(11,0.9), ## age-specific start pars, fishery
+                                                                  c(11,0.9))), ## alpha, b1, survey
+                                                # fix_pars=list(10,2)), ## fix ages 1:11 for fish and b1 for survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
-  # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradiet should be < 1e-06)
+
+  # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
   check_convergence(m1)
 
   # Save list of all fit models
