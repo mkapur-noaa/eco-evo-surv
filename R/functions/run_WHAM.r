@@ -1,16 +1,17 @@
 ## build_WHAM.R
 ## script to take formatted data and build, execute WHAM input files
 
-build_WHAM <-function(scenario,
+run_WHAM <-function(scenario,
                       sppIdx,
                       repID = 1,
                       yrs_use = 2010:2099, ## years to run the assessment
                       file_suffix = NULL
                    ){
 
-  scen <- scenLabs2[scenario,2]
-  repID2 <- repID-1
-  spname <- sppLabs2[sppIdx,2]
+  filen <- strsplit(file_suffix,'-')[[1]]
+  scen <- filen[5]
+  repID2 <- filen[6]
+  spname <- filen[4]
 
   wham.dir <- here::here('outputs','wham_runs',file_suffix)
 
@@ -88,16 +89,16 @@ build_WHAM <-function(scenario,
   check_convergence(m1)
 
   # Save list of all fit models
-  mods <- list(m1=m1, m2=m2, m3=m3, m4=m4)
-  save("mods", file="ex1_models.RData")
+  # mods <- list(m1=m1, m2=m2, m3=m3, m4=m4)
+  # save("mods", file="ex1_models.RData")
 
   # Compare models by AIC and Mohn's rho
-  res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
-  res$best
+  # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
+  # res$best
 
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
-  m4_proj <- project_wham(model=mods$m4)
+  # m4_proj <- project_wham(model=mods$m4)
 
   # WHAM output plots for best model with projections
   plot_wham_output(mod=m1,res = 250, dir.main = wham.dir) # default is png
