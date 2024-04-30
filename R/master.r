@@ -6,39 +6,55 @@
 rm(list = ls()) ## clear workspace
 invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
-cores <- detectCores() - 2
-cl <- makeCluster(cores)
-registerDoParallel(cl)
 
 ## Create input data ----
 ## Only need to do this if the simulations themselves or sampling protocol have changed
 ## (e.g., obs error, survey array, years or frequency thereof, etc)
 
+#* brute ----
+for(scenario in 1){
+  for(species in  c(sppLabs2$Var3[sppLabs2$Var4]+1)){
+    for(replicate in 1:3){
+      build_Data(scenario,
+                 sppIdx = species,
+                 repID = replicate,
+                 yrs_use = 2010:2080, ## years to extract data for
+                 srv_selex = 11, ## age at 50% selex
+                 obs_error = 0.2, ## observation error for surveys
+                 units = 'biomass',
+                 units_scalar = 1,
+                 do_GAM = FALSE)
+    } ## end replicate
+  } ## end species
+} ## end scenario
+#* parallel ----
+cores <- detectCores() - 2
+cl <- makeCluster(cores)
+registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
 # foreach(ff = 1:nrow(F0_sim)) %:%
 #   #   foreach(s = 1) %dopar%
 # foreach(scenario=1:4) %dopar% {
 #   for(species in c(sppLabs2$Var3[sppLabs2$Var4]+1)) {
-
-
-foreach(scenario=1:4)%:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %dopar%  {
+foreach(scenario=2) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
+  foreach(replicate=4:6)  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
-    build_Data(scenario,
-               sppIdx = species,
-               repID = 1, ## replicates 1:29
+    scen_use = scenario; sp_use = species; replicate_use = replicate
+
+    build_Data(scenario=scen_use,
+               sppIdx = sp_use,
+               repID = replicate_use,
                yrs_use = 2010:2080, ## years to extract data for
                srv_selex = 11, ## age at 50% selex
                obs_error = 0.2, ## observation error for surveys
                units = 'biomass',
                units_scalar = 1,
                do_GAM = FALSE)
-  } ## end nested scenario loop
-
+  } ## end nested loop
 # When you're done, clean up the cluster
-stopImplicitCluster()
-# stopCluster()
+stopImplicitCluster();stopCluster()
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
