@@ -3,10 +3,12 @@
 
 build_WHAM <-function(scenario,
                       sppIdx,
-                      repuse = 1,
+                      repID = 1,
                       file_suffix  = NULL,
                       yrs_use = 2010:2099){
-
+  # scen <- scenLabs2[scenario,2]
+  # repID2 <- repID-1
+  # spname <- sppLabs2[sppIdx,2]
   wham.dir <- here::here('outputs','wham_runs',file_suffix)
 
   ## load input data ----
@@ -45,7 +47,7 @@ build_WHAM <-function(scenario,
   asap3$dat$use_index <- 1
 
   #* initial pars ----
-  ## asap3$dat$N1_ini <- exp(-)
+  # asap3$dat$N1_ini <- exp(-mortality)
   ## asap3$dat$F1_ini
 
   #* data ----
@@ -56,19 +58,17 @@ build_WHAM <-function(scenario,
   asap3$dat$CAA_mats[[1]] <- as.matrix(catch_at_age)
   asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
   asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
-  # asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
+  asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
   asap3$dat$catch_cv <- matrix(0.1, nrow = asap3$dat$n_years)
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
 
 
   #* selex ----
-  # asap3$dat$n_ages <- max_age_pop
-  # asap3$dat$maturity <- matrix(0.2, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
 
 
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2,
-                               model_name="Ex 1: SNEMA Yellowtail Flounder",
+                               model_name=file_suffix,
                                selectivity=list(model=rep("age-specific",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                                 initial_pars=list(c(rep(0.5,17)),
