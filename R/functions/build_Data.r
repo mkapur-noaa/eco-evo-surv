@@ -21,7 +21,9 @@ build_Data<-function(scenario,
                      srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=11)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
                      units = 'biomass', ## units for survey observations
-                     units_scalar = 1){
+                     units_scalar = 1,
+                     do_GAM = FALSE) ## whether or not to invoke spatial standardization
+  {
 
   ## string designators
   scen <- scenLabs2[scenario,2]
@@ -48,8 +50,33 @@ build_Data<-function(scenario,
     laa[a,'age'] <- a
     laa[a,'length_cm'] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
   }
+  write.table(laa,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-laa.csv'),
+                row.names = FALSE)
 
   max_age_pop <- as.numeric(max_age_pop$value)
+
+  #* unfished NAA (for N1_ini) ----
+  ## ballpark from earlier runs
+  age_spatial_nofish_path <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/one_sim_without_fishing",
+                             "/ns_spatial_abundancebyAge-",spname,"_Simu0.nc")
+  abundance_nofish <- ncvar_get(nc_open(age_spatial_nofish_path),"abundance") ## this might need to switch with units_use
+ reshape2::melt(abundance_nofish) %>%
+    filter(!is.na(value)) %>% ## drop land
+    mutate(year = 2010 + (Var4 - 1) %/% 24,
+           month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
+    select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+    filter(year == 2010) %>% ## assume equilibrium
+    group_by(age) %>%
+    summarise(value = mean(value)) %>% ## average
+    ungroup() %>%
+   filter(age <= max_age_pop) %>%
+   t() %>%
+   write.table(.,
+               sep = ' ',
+               paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),
+               row.names = FALSE)
 
 
 
@@ -157,7 +184,8 @@ build_Data<-function(scenario,
 
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
 
-  biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
+
+
   biomass <- reshape2::melt(biomass0) %>%
     filter(!is.na(value)) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
@@ -349,7 +377,7 @@ build_Data<-function(scenario,
   #*   Avoid using population NAA and monkeying with selex.
   #*   FOR NOW, assume that the catch WAA matches the population
 
-  ## Summary figures ----
+  ## Summary figures and data ----
   #* Catch Figures ----
 
   ggplot(yield1, aes(x = year, y = value, fill = as.factor(age))) +
@@ -388,9 +416,15 @@ build_Data<-function(scenario,
   ## survey index data
   true_biomass <- biomass %>%
     group_by(year) %>%
-    summarise(abund_mean=sum(value,na.rm = T)) %>%
+    summarise(abund_mean=sum(value,na.rm = T),
+              abund_sd = sd(value, na.rm = T)*n()/sqrt(n()),
+              abund_mean_cv = abund_sd/abund_mean) %>%
     ungroup() %>%
     mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)))
+
+  write.csv(true_biomass,
+            paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
+            row.names = FALSE)
 
   true_b <- ggplot(true_biomass, aes(x = year, y =abund_mean_rescale)) +
     geom_line(color = scenLabs2[scenario,'Pal'])+
