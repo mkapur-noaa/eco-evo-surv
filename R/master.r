@@ -15,10 +15,16 @@ registerDoParallel(cl)
 ## (e.g., obs error, survey array, years or frequency thereof, etc)
 
 ## for one species-replicate combo, four scenarios takes about 20 seconds
-foreach(scenario=1:4) %dopar% {
-  invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
+# foreach(ff = 1:nrow(F0_sim)) %:%
+#   #   foreach(s = 1) %dopar%
+# foreach(scenario=1:4) %dopar% {
+#   for(species in c(sppLabs2$Var3[sppLabs2$Var4]+1)) {
 
-  for(species in (sppLabs2$Var3[sppLabs2$Var4]+1)) {
+
+foreach(scenario=1:4)%:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %dopar%  {
+    invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
+
     build_Data(scenario,
                sppIdx = species,
                repID = 1, ## replicates 1:29
@@ -28,14 +34,20 @@ foreach(scenario=1:4) %dopar% {
                units = 'biomass',
                units_scalar = 1,
                do_GAM = FALSE)
-  } ## end species loop
-} ## end scenario loop (parallel)
+  } ## end nested scenario loop
 
 # When you're done, clean up the cluster
 stopImplicitCluster()
 # stopCluster()
 
 ## Run WHAM models ----
+files_to_run <-   list.dirs(path = here::here('outputs','wham_runs'),recursive = FALSE)
+
+foreach(files_to_run) %dopar% {
+  invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
+  run_WHAM(yrs_use = 2010:2099, ## years to run the assessment
+           file_suffix = files_to_run)
+} ## end files loop
 
 
 ## Summarize results across all species, scenarios, simulations ----
