@@ -166,7 +166,7 @@ build_Data<-function(scenario,
   ## redefine the timesteps into real year, week, and not NA
   ## and then only take out the July populations
   abundance <- reshape2::melt(abundance0) %>%
-    filter(!is.na(value)) %>% ## drop land
+    filter(!is.na(value) & Var3 <= max_age_pop) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
     select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
@@ -187,7 +187,7 @@ build_Data<-function(scenario,
   total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
   biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
   biomass <- reshape2::melt(biomass0) %>%
-    filter(!is.na(value)) %>% ## drop land
+    filter(!is.na(value) & Var3 <= max_age_pop) %>% ## drop land
     mutate(year = 2010 + (Var4 - 1) %/% 24,
            month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
     select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
