@@ -144,8 +144,11 @@ build_Data<-function(scenario,
   ## need numbers ('abundance') for ages, biomass for indices
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
-  survey_selex <- if(is.null(srv_selex)) {rep(1,max_age_pop)} else { 1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex)))}
-  survey_selex <- cbind(age = 1:max_age_pop, slx = survey_selex)
+  survey_selex <- if(is.null(srv_selex)) {
+    cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
+  } else {
+    cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex))))
+  }
 
   age_spatial_path <- list.files(dirtmp,
                                  pattern = paste0('spatial_abundancebyAge-',spname),
