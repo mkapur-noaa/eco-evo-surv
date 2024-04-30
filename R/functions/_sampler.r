@@ -23,7 +23,7 @@ build_survey_array <- function(n_years = length(2010:2099), fractional_coverage 
 }
 
 # A function that samples a station for abundance (biomass or numbers) and age comps
-sample_ages <- function(df = cell_data, timestep=2010, long, lat) {
+sample_ages <- function(df = cell_data, timestep=2010, long, lat,max_age_pop) {
   # Exclude NAs
   # df <- df[!is.na(df$value), ]
 
