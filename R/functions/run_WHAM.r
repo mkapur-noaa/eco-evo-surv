@@ -97,8 +97,10 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
 
-  # WHAM output plots for best model with projections
-  plot_wham_output(mod=m1,res = 250, dir.main = wham.dir) # default is png
+  # WHAM output plots for best model with projections ----
+  plot_wham_output(mod=m1,
+                   res = 250,
+                   dir.main = wham.dir) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
 
   # calculate MRE, save figure and table
