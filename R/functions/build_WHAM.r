@@ -4,11 +4,14 @@
 build_WHAM <-function(scenario,
                       sppIdx,
                       repID = 1,
-                      file_suffix  = NULL,
-                      yrs_use = 2010:2099){
-  # scen <- scenLabs2[scenario,2]
-  # repID2 <- repID-1
-  # spname <- sppLabs2[sppIdx,2]
+                      yrs_use = 2010:2099, ## years to run the assessment
+                      file_suffix = NULL
+                   ){
+
+  scen <- scenLabs2[scenario,2]
+  repID2 <- repID-1
+  spname <- sppLabs2[sppIdx,2]
+
   wham.dir <- here::here('outputs','wham_runs',file_suffix)
 
   ## load input data ----
@@ -115,7 +118,7 @@ build_WHAM <-function(scenario,
            scenario = scen,
            species = spname)
 
- ssb_compare <-  mre_table %>%
+  ssb_compare <-  mre_table %>%
     select(year, abund_mean, ssb_est, lower, upper) %>%
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
@@ -128,7 +131,8 @@ build_WHAM <-function(scenario,
                        labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
     labs(x = 'Assessment Year', y = 'SSB (kmt)') +
     theme(legend.position = c(0.8,0.8)) +
-    labs(color = '')
+    labs(color = '') +
+    scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$abund_mean)))
 
  mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
