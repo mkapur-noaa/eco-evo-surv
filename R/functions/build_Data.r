@@ -26,7 +26,7 @@ build_Data<-function(scenario,
 
   ## string designators
   scen <- scenLabs2[scenario,2]
-  repID2 <- repID-1
+  repID2 <- sort(as.character(0:28))[repID]
   spname <- sppLabs2[sppIdx,2]
 
   file_suffix <- paste(Sys.Date(),spname,scen,repID2,sep = '-')
@@ -247,7 +247,8 @@ build_Data<-function(scenario,
       # cat(i,"\n")
       # Perform the age sampling and store the results
       results_age[[paste(timestep, selected_cells$long[i], selected_cells$lat[i], sep = "_")]] <-
-        sample_ages(cell_data, timestep, long = selected_cells$long[i], lat = selected_cells$lat[i])
+        sample_ages(cell_data, timestep, long = selected_cells$long[i], lat = selected_cells$lat[i],
+                    max_age_pop)
 
     } ## end stations loop for age comps
   } ## end timesteps loop for survey data
