@@ -327,7 +327,7 @@ build_Data<-function(scenario,
     ## truncate age-zeros and max ages
     mutate(value = case_when(age == 1 ~ 0,
                              # age >= max_age_catch  ~ -999,
-                             age <= max_age_catch ~ round(value))) %>%
+                             age <= max_age_pop ~ round(value))) %>%
     tidyr::pivot_wider(names_from = age, values_from = value) %>%
     select(-year) %>%
     mutate(total = rowSums(.)+999) %>%
