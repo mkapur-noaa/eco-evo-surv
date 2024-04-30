@@ -47,8 +47,10 @@ build_WHAM <-function(scenario,
   asap3$dat$use_index_acomp <- 1
   asap3$dat$use_index <- 1
 
-  #* initial pars ----
-  asap3$dat$N1_ini <- N_init
+  asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
+
+    #* initial pars ----
+  asap3$dat$N1_ini <- as.matrix(N_init, nrow = 1)
   ## asap3$dat$F1_ini
 
   #* data ----
@@ -95,7 +97,7 @@ build_WHAM <-function(scenario,
   m4_proj <- project_wham(model=mods$m4)
 
   # WHAM output plots for best model with projections
-  plot_wham_output(mod=m4) # default is png
+  plot_wham_output(mod=m1,res = 250, dir.main = wham.dir) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
 
 
