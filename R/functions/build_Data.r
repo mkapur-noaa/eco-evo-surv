@@ -468,10 +468,7 @@ build_Data<-function(scenario,
                                                                modification = "go_lighter",
                                                                n_colours = length(unique(results_df_age$year)),
                                                                view_palette = FALSE)) +
-    theme(legend.position = 'none', axis.text.y = element_blank()) #+
-  # facet_grid(year~., scales = 'free') +
-  # theme(panel.spacing = unit(0.2, "lines"),)
-
+    theme(legend.position = 'none', axis.text.y = element_blank())
 
 
   png(file =  paste0(wham.dir,"/",file_suffix,   '-survey_data.png'),
