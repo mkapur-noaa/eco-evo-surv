@@ -63,7 +63,11 @@ sppPal <- gplots::rich.colors(n = 13)
 
 survey_array <- build_survey_array(fractional_coverage = 0.10)
 
-
+write.table(survey_array,
+            sep = ',',
+            here::here('outputs','wham_runs',paste0(Sys.Date(),'-survey_array_',
+                   round(nrow(survey_array[survey_array$year == 2010, ])/632,2),'.csv')),
+            row.names = FALSE)
 ## build and save parameter lookup tables ----
 
 # parm_path <- "F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/cc_evo/ns_param-species.csv" ## stored once for all runs, not time-invariant
