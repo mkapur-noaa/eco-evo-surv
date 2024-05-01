@@ -51,7 +51,7 @@ scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: r
 scenLabs2 <- data.frame(cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal)))
 sppPal <- gplots::rich.colors(n = 13)
 
-survey_array <- build_survey_array(fractional_coverage = 0.3)
+survey_array <- build_survey_array(fractional_coverage = 0.10)
 
 
 ## build and save parameter lookup tables ----
