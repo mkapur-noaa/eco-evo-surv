@@ -43,7 +43,7 @@ foreach(scenario=1:4) %:%
                sppIdx = sp_use,
                repID = replicate_use,
                yrs_use = 2010:2080, ## years to extract data for
-               srv_selex = 11, ## age at 50% selex
+               srv_selex = 7, ## age at 50% selex
                obs_error = 0.2, ## observation error for surveys
                units = 'biomass',
                units_scalar = 1,
@@ -81,13 +81,13 @@ tabund <- list.files(here::here('outputs','wham_runs'),
 ggplot(tabund, aes(x = year, y = med, fill = scenario, color = scenario)) +
   geom_line() +
   geom_ribbon(aes(ymin = lwr50, ymax = upr50),
-              alpha = 0.1, color = NA) +
+              alpha = 0.2, color = NA) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
-  labs(x = 'Year', y = 'True Biomass (kmt)', color = '', fill = '')+
-  theme(legend.position = 'bottom')
+  labs(x = 'Year', y = 'True Biomass (kmt)', color = '', fill = '')
+  # theme_bw()
 
 ggsave(last_plot(),
        file =here('figs','biomass_by_scenario_50ci.png'),
-       width = 9, height = 6, unit = 'in', dpi = 400)
+       width = 8, height = 4, unit = 'in', dpi = 400)
