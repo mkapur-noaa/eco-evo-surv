@@ -437,7 +437,6 @@ build_Data<-function(scenario,
     labs(x = 'Year', y = paste0('True Abundance ',
                                 ifelse(units == 'numbers','(millions)','(tons)')))
 
-
   index <- ggplot(results_df_index %>%
                     mutate(abund_mean_rescale = rescale(abund_mean, to = c(0,1))),
                   aes(x = year, y = abund_mean)) +
@@ -449,7 +448,9 @@ build_Data<-function(scenario,
     #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
-    labs(x = 'Year', y = 'Biomass', title = 'Survey Index')
+    labs(x = 'Year', y = 'Biomass', title = paste0('Survey Index, coverage = ',
+                                                   round(nrow(survey_array[survey_array$year == 2010, ]))/
+                                                     632,2))
 
   ## survey age comps
   comps <- results_df_age %>%
