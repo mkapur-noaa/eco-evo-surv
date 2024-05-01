@@ -22,7 +22,7 @@ build_Data<-function(scenario,
                      units = 'biomass', ## units for survey observations
                      units_scalar = 1,
                      do_GAM = FALSE) ## whether or not to invoke spatial standardization
-  {
+{
 
   ## string designators
   scen <- scenLabs2[scenario,2]
@@ -50,9 +50,9 @@ build_Data<-function(scenario,
     laa[a,'length_cm'] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
   }
   write.table(laa,
-                sep = ' ',
-                paste0(wham.dir,"/",file_suffix,'-laa.csv'),
-                row.names = FALSE)
+              sep = ' ',
+              paste0(wham.dir,"/",file_suffix,'-laa.csv'),
+              row.names = FALSE)
 
   max_age_pop <- as.numeric(max_age_pop$value)
 
@@ -197,6 +197,7 @@ build_Data<-function(scenario,
     ungroup() %>%
     select(-month)
 
+  ## extract and save the true biomass from the whole year
   true_biomass <- biomass %>%
     group_by(year) %>%
     summarise(abund_mean=sum(value,na.rm = T),
@@ -269,7 +270,7 @@ build_Data<-function(scenario,
 
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
-   filter(age <= max_age_survey)
+    filter(age <= max_age_survey)
   #mutate(count = ifelse(age <= max_age_pop, count, -999)) ## blank data for unused ages
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
@@ -280,11 +281,6 @@ build_Data<-function(scenario,
     ungroup()
 
   results_df_index <- do.call(rbind, results_index)
-
-
-
-
-
 
   # rescale, reshape to WHAM format and save
   # fill missing years with -999
@@ -363,8 +359,8 @@ build_Data<-function(scenario,
   #*   population WAA ----
   ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
   waa <- read.csv(header = T, skip = 1,
-           list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
-                      recursive = T, full.names = TRUE)[repID]) %>%
+                  list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
+                             recursive = T, full.names = TRUE)[repID]) %>%
     reshape2::melt(id = c('Time','Age')) %>%
     filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
     mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
@@ -414,12 +410,12 @@ build_Data<-function(scenario,
   #* Survey figures ----
   ## maps of true biomass thru time
   spatial_biomass <- biomass %>%
-    summarise(tot_val = sum(value), .by = c(year, lat, long)) %>%
-    ungroup() %>%
-    mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
-           replicate = repID2,
-           scenario = scen,
-           species = spname)
+    summarise(tot_val = sum(value),   .by = c(year, lat, long)) %>%
+    summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),  .by = c(year))
+  mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
+         replicate = repID2,
+         scenario = scen,
+         species = spname)
 
   write.csv(spatial_biomass,
             paste0(wham.dir,"/",file_suffix,"-true_biomass_spatial.csv"),
@@ -459,9 +455,9 @@ build_Data<-function(scenario,
     #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
-    labs(x = 'Year', y = 'Biomass', title = paste0('Survey Index, coverage = ',
-                                                   round(nrow(survey_array[survey_array$year == 2010, ]))/
-                                                     632,2))
+    labs(x = 'Year', y = 'Biomass',
+         title = paste0('Survey Index, coverage = ',
+                        round(nrow(survey_array[survey_array$year == 2010, ])/632,2)))
 
   ## survey age comps
   comps <- results_df_age %>%
