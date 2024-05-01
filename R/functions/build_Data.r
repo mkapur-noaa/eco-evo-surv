@@ -406,9 +406,9 @@ build_Data<-function(scenario,
                          fill = abundance_rescale))+
     theme_void()+
     geom_raster()+
-    geom_point(data = filter(survey_array, year %in% floor(seq(2020,max(biomass$year),length.out = 4))),
-               fill = NA,
-               color = 'red', shape = 4, size = 0.1)+
+    # geom_point(data = filter(survey_array, year %in% floor(seq(2020,max(biomass$year),length.out = 4))),
+    #            fill = NA,
+    #            color = 'red', shape = 4, size = 0.1)+
     scale_fill_viridis_c(na.value = NA)+
     theme(strip.text = element_text(size = 25),
           strip.text.y = element_blank(),
