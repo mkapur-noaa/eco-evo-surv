@@ -29,14 +29,14 @@ build_Data<-function(scenario,
   repID2 <- sort(as.character(0:28))[repID]
   spname <- sppLabs2[sppIdx,2]
 
-  file_suffix <- paste(Sys.Date(),spname,scen,repID2,sep = '-')
+  file_suffix <- paste(spname,scen,repID2,sep = '-')
 
   ## where the raw evOsmose outputs are stored
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
   ## where the WHAM outputs are to be stored
-  wham.dir <- here::here('outputs','wham_runs',file_suffix)
-  if(!dir.exists(wham.dir)) dir.create(wham.dir)
+  head.dir <- here::here('outputs','wham_runs',file_suffix);   if(!dir.exists(head.dir)) dir.create(head.dir)
+  wham.dir <- here::here(head.dir,Sys.Date()); if(!dir.exists(wham.dir)) dir.create(wham.dir)
 
   ## load parameters for this species ----
   lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
@@ -197,9 +197,23 @@ build_Data<-function(scenario,
     ungroup() %>%
     select(-month)
 
+  true_biomass <- biomass %>%
+    group_by(year) %>%
+    summarise(abund_mean=sum(value,na.rm = T),
+              abund_sd = sd(value, na.rm = T)*n()/sqrt(n()),
+              abund_mean_cv = abund_sd/abund_mean) %>%
+    ungroup() %>%
+    mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
+           replicate = repID2,
+           scenario = scen,
+           species = spname)
+
+  write.csv(true_biomass,
+            paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
+            row.names = FALSE)
+
   # Initialize an empty list to store the results
   results_age <- results_index <- list()
-
 
   # For each timestep
   for (timestep in unique(abundance$year)) {
@@ -266,6 +280,11 @@ build_Data<-function(scenario,
     ungroup()
 
   results_df_index <- do.call(rbind, results_index)
+
+
+
+
+
 
   # rescale, reshape to WHAM format and save
   # fill missing years with -999
@@ -394,13 +413,19 @@ build_Data<-function(scenario,
          width = 6, height = 6, unit = 'in', dpi = 400)
   #* Survey figures ----
   ## maps of true biomass thru time
-  map <- biomass %>%
-    #group_by(lat, long) %>%
-    #group_by(year, lat, long) %>%
+  spatial_biomass <- biomass %>%
     summarise(tot_val = sum(value), .by = c(year, lat, long)) %>%
     ungroup() %>%
-    mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T)) %>%
+    mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
+           replicate = repID2,
+           scenario = scen,
+           species = spname)
 
+  write.csv(spatial_biomass,
+            paste0(wham.dir,"/",file_suffix,"-true_biomass_spatial.csv"),
+            row.names = FALSE)
+
+  map <-  spatial_biomass %>%
     filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
     ggplot(data = ., aes(x = lat, y = long,
                          fill = abundance_rescale))+
@@ -416,20 +441,6 @@ build_Data<-function(scenario,
     facet_wrap(~year, ncol = 2)
 
   ## survey index data
-  true_biomass <- biomass %>%
-    group_by(year) %>%
-    summarise(abund_mean=sum(value,na.rm = T),
-              abund_sd = sd(value, na.rm = T)*n()/sqrt(n()),
-              abund_mean_cv = abund_sd/abund_mean) %>%
-    ungroup() %>%
-    mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
-           replicate = repID2,
-           scenario = scen,
-           species = spname)
-
-  write.csv(true_biomass,
-            paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
-            row.names = FALSE)
 
   true_b <- ggplot(true_biomass, aes(x = year, y =abund_mean_rescale)) +
     geom_line(color = scenLabs2[scenario,'Pal'])+
