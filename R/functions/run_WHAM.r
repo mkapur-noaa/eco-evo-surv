@@ -96,15 +96,8 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
-
-  # WHAM output plots for best model with projections ----
-  plot_wham_output(mod=m1,
-                   res = 250,
-                   dir.main = wham.dir) # default is png
-  # plot_wham_output(mod=m4_proj, out.type='html')
-
   # calculate MRE, save figure and table
-  std <- summary(mod$sdrep)
+  std <- summary(m1$sdrep)
   ssb.ind <- which(rownames(std) == "log_SSB")[1:length(m1$years)]
 
   mre_table <- true_biomass[1:length(m1$years),] %>%
@@ -127,22 +120,29 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                   'grey22'),
                        labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
     labs(x = 'Assessment Year', y = 'SSB (kmt)') +
-    theme(legend.position = c(0.8,0.8)) +
+    theme(legend.position.inside = c(0.8,0.8)) +
     labs(color = '') +
     scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$abund_mean)))
 
- mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
+  mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
-    scale_y_continuous(limits = c(-50,50)) +
+    scale_y_continuous(limits = c(-100,100)) +
     labs(x = 'Assessment Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
   write.csv(mre_table,paste0(wham.dir,"/",file_suffix,"-ssb_mre.csv"), row.names = FALSE)
 
-  png(file =  paste0(wham.dir,'/plots_png','/results','/ssb_mre.png'),
+  png(file =  paste0(wham.dir,"/ssb_mre.png"),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(ssb_compare, mre, cols = 2)
   dev.off()
+
+
+  # WHAM output plots for best model with projections ----
+  plot_wham_output(mod=m1,
+                   res = 250,
+                   dir.main = wham.dir) # default is png
+  # plot_wham_output(mod=m4_proj, out.type='html')
 
 
 }
