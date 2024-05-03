@@ -74,7 +74,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   #* fishery selex is age specific
   #* survey selex is logistic
   input1 <- prepare_wham_input(asap3,
-                               recruit_model=2,
+                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                model_name=file_suffix2,
                                selectivity=list(model=c('logistic','logistic'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
@@ -145,6 +145,8 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                    res = 250,
                    dir.main = wham.dir) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
+
+  save(m1, file = paste0(wham.dir,'/model.rdata'))
 
 
 }
