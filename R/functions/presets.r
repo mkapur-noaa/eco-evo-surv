@@ -20,9 +20,10 @@ library(testthat)
 library(wham)
 # remotes::install_github("cararthompson/monochromeR"
 library(monochromeR)
+library(RColorBrewer)
 
 theme_set(ggsidekick::theme_sleek()+
-            theme(legend.position = 'bottom',
+            theme(
                   legend.background = element_blank(),
                   plot.background = element_blank(),
                   panel.background = element_blank(),
@@ -68,6 +69,19 @@ write.table(survey_array,
             here::here('outputs','wham_runs',paste0(Sys.Date(),'-survey_array_',
                    round(nrow(survey_array[survey_array$year == 2010, ])/632,2),'.csv')),
             row.names = FALSE)
+
+# https://stackoverflow.com/questions/48297440/list-files-recursive-up-to-a-certain-level-in-r
+list.dirs.depth.n <- function(p, n) {
+  res <- list.dirs(p, recursive = FALSE)
+  if (n > 1) {
+    add <- list.dirs.depth.n(res, n-1)
+    c(res, add)
+  } else {
+    res
+  }
+}
+
+
 ## build and save parameter lookup tables ----
 
 # parm_path <- "F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/cc_evo/ns_param-species.csv" ## stored once for all runs, not time-invariant

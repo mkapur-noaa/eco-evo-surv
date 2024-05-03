@@ -32,7 +32,7 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
-foreach(scenario=1:4) %:%
+foreach(scenario=1) %:%
   foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
   foreach(replicate=1)  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
@@ -54,15 +54,14 @@ stopImplicitCluster();stopCluster()
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-files_to_run <-   list.dirs(path = here::here('outputs','wham_runs'),recursive = T) %>%
+files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3)%>%
   .[grepl('2024-05-03/rep',.)]
-
 
 foreach(file_use = files_to_run[9]) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
   run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
-           file_suffix = file_use)
+           file_suffix = files_to_run[2])
 } ## end files loop
 
 
