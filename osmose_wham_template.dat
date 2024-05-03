@@ -1421,7 +1421,7 @@
 # CV for Fmult deviations
 1
 # Lambda for N in 1st year deviations
-1
+0
 # CV for N in 1st year deviations
 1
 # Lambda for recruitment deviations
@@ -1443,7 +1443,7 @@
 # CV for deviation from initial SSB0
 1
 # NAA Deviations flag (1=   , 0=  )
-1
+0
 ###########################################
 ###  Initial Guesses
 # NAA for year1
