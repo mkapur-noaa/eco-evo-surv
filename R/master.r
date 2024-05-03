@@ -43,8 +43,10 @@ foreach(scenario=1) %:%
                sppIdx = sp_use,
                repID = replicate_use,
                yrs_use = 2010:2080, ## years to extract data for
+               srv_selex = NULL, ## age at 50% selex
+               obs_error = NULL, ## observation error for surveys
                srv_selex = 7, ## age at 50% selex
-               obs_error = 0.2, ## observation error for surveys
+               # obs_error = 0.2, ## observation error for surveys
                units = 'biomass',
                units_scalar = 1,
                do_GAM = FALSE)
@@ -57,11 +59,11 @@ stopImplicitCluster();stopCluster()
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3)%>%
   .[grepl('2024-05-03/rep',.)]
 
-foreach(file_use = files_to_run[9]) %dopar% {
+foreach(file_use = files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
   run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
-           file_suffix = files_to_run[2])
+           file_suffix = files_to_run[3])
 } ## end files loop
 
 
