@@ -16,7 +16,7 @@
 build_Data<-function(scenario,
                      sppIdx,
                      repID = 1,
-                     yrs_use = 2010:2099,
+                     yrs_use = 2010:2080,
                      srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=11)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
                      units = 'biomass', ## units for survey observations
@@ -35,8 +35,10 @@ build_Data<-function(scenario,
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
   ## where the WHAM outputs are to be stored
-  head.dir <- here::here('outputs','wham_runs',file_suffix);   if(!dir.exists(head.dir)) dir.create(head.dir)
-  wham.dir <- here::here(head.dir,Sys.Date()); if(!dir.exists(wham.dir)) dir.create(wham.dir)
+  ## Species-Scenario head folder
+  head.dir <- here::here('outputs','wham_runs',paste(spname,scen, sep = '-')); if(!dir.exists(head.dir)) dir.create(head.dir)
+  if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
+  wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
 
   ## load parameters for this species ----
   lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
@@ -280,7 +282,25 @@ build_Data<-function(scenario,
     select(year = timestep, age, count) %>%
     ungroup()
 
+  results_df_age %>%
+    mutate( replicate = repID2,
+           scenario = scen,
+           species = spname) %>%
+    write.csv(.,
+                paste0(wham.dir,"/",file_suffix,'-survey_obs_agecomp-numbers.csv'),
+                row.names = FALSE)
+
   results_df_index <- do.call(rbind, results_index)
+
+  results_df_index %>%
+    mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
+           replicate = repID2,
+           scenario = scen,
+           species = spname) %>%
+    write.csv(.,
+                paste0(wham.dir,"/",file_suffix,'-survey_obs_biomass.csv'),
+                row.names = FALSE)
+
 
   # rescale, reshape to WHAM format and save
   # fill missing years with -999
@@ -407,15 +427,16 @@ build_Data<-function(scenario,
                                                               view_palette = FALSE))
   ggsave(last_plot(), file = paste0(wham.dir,"/",file_suffix,"-catch_at_age.png"),
          width = 6, height = 6, unit = 'in', dpi = 400)
+
   #* Survey figures ----
   ## maps of true biomass thru time
   spatial_biomass <- biomass %>%
     summarise(tot_val = sum(value),   .by = c(year, lat, long)) %>%
-    summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),  .by = c(year))
-  mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
-         replicate = repID2,
-         scenario = scen,
-         species = spname)
+    # summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),  .by = c(year))
+    mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
+           replicate = repID2,
+           scenario = scen,
+           species = spname)
 
   write.csv(spatial_biomass,
             paste0(wham.dir,"/",file_suffix,"-true_biomass_spatial.csv"),

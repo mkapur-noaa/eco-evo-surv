@@ -5,10 +5,10 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                       file_suffix = NULL
                    ){
 
-  filen <- strsplit(file_suffix,'-')[[1]]
-  scen <- filen[5]
-  repID2 <- filen[6]
-  spname <- filen[4]
+  filen2 <- basename(dirname(dirname(file_suffix)))
+  scen <-   strsplit(filen2,'-')[[1]][2]
+  repID2 <- as.numeric(gsub('rep','',basename(file_suffix)))
+  spname <-   strsplit(filen2,'-')[[1]][1]
 
   wham.dir <- here::here('outputs','wham_runs',file_suffix)
 
