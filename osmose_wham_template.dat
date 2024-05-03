@@ -1045,7 +1045,7 @@
 # Lambda for each index
 1
 # Lambda for Total catch in weight by fleet
-0
+1
 # Lambda for total discards at age by fleet
 0
 # Catch Total CV by year and fleet
@@ -1421,7 +1421,7 @@
 # CV for Fmult deviations
 1
 # Lambda for N in 1st year deviations
-0
+1
 # CV for N in 1st year deviations
 1
 # Lambda for recruitment deviations
