@@ -942,7 +942,7 @@
 # Phase for N in 1st year
 2
 # Phase for catchability in 1st year
--1
+1
 # Phase for catchability deviations
 -1
 # Phase for stock recruit relationship
@@ -1449,7 +1449,7 @@
 # NAA for year1
 110372.274 90365.175 73984.748 60573.588 49593.460 40603.691 33243.490 27217.468 22283.778 18244.414 14937.263 12229.597 10012.747 8197.744 6711.745 5495.112 4499.017
 # Fmult in 1st year by fleet
-0.1
+0.075
 # Catchability in 1st year by index
 1
 # S-R Unexploited specification (1=   0=)
