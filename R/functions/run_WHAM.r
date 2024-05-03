@@ -10,18 +10,20 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   repID2 <- as.numeric(gsub('rep','',basename(file_suffix)))
   spname <-   strsplit(filen2,'-')[[1]][1]
 
-  wham.dir <- here::here('outputs','wham_runs',file_suffix)
+  file_suffix2 <- paste0(filen2,'-',repID2)
+
+  wham.dir <- file_suffix
 
   ## load input data ----
-  mortality <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
-  maturity <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
-  catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
-  survey <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
+  mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
+  maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
+  catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
+  survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
   # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
-  waa_catch <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
-  waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
-  N_init <- read.table(paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),  skip = 1)[2,]
-  true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix,'-true_biomass.csv'))
+  waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
+  waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
+  N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
+  true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass.csv'))
 
   ## load asap3-style data file ----
   # copy templated asap3 data file to working directory
@@ -73,7 +75,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   #* survey selex is logistic
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2,
-                               model_name=file_suffix,
+                               model_name=file_suffix2,
                                selectivity=list(model=c('logistic','logistic'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                                 initial_pars=list(c(11,0.9), ## age-specific start pars, fishery
@@ -130,7 +132,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
     labs(x = 'Assessment Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
-  write.csv(mre_table,paste0(wham.dir,"/",file_suffix,"-ssb_mre.csv"), row.names = FALSE)
+  write.csv(mre_table,paste0(wham.dir,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
 
   png(file =  paste0(wham.dir,"/ssb_mre.png"),
       height = 5, width = 12, unit = 'in',res = 520)
