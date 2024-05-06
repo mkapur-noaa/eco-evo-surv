@@ -325,7 +325,7 @@ build_Data<-function(scenario,
                             age = 1:max_age_pop,
                             fill = list(count = -999) ) %>%
             tidyr::pivot_wider(., names_from = age, values_from = count), by = 'year') %>%
-    mutate(inputN = 50) %>%
+    mutate(inputN = 100) %>%
     arrange(year)
 
   # save the results
