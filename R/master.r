@@ -61,9 +61,7 @@ stopImplicitCluster();stopCluster()
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
   .[grepl('2024-05-06/rep',.)] %>%
-  .[grepl('Herring',.)] %>%
-  .[!grepl('rep11',.)]
-
+  .[grepl('Herring',.)]
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
@@ -73,7 +71,7 @@ foreach(file_use = files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
   run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
-           file_suffix = file_use)
+           file_suffix = files_to_run[15])
 } ## end files loop
 stopImplicitCluster();stopCluster()
 
@@ -97,24 +95,24 @@ mre_all <- list.files(files_to_run,
 ggplot(mre_all, aes(x = year, y = med,
                     color = scenario, fill = scenario)) +
   geom_line() +
-  geom_ribbon(aes(ymin = lwr50, ymax = upr50),
-              alpha = 0.2, color = NA) +
+  geom_ribbon(aes(ymin = lwr95, ymax = upr95),
+              alpha = 0.15, color = NA) +
   scale_y_continuous(limits = c(-100,100)) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
   geom_hline(yintercept = 0, color = 'pink') +
+  theme(legend.position = 'none')+
   facet_wrap(~species,labeller = as_labeller(sppLabs))
 
 
-
 ggsave(last_plot(),
-       file =here('figs','MRE_by_scenario'),
-       width = 3, height = 10, unit = 'in', dpi = 400)
+       file =here('figs',paste0(Sys.Date(),'-MRE_by_scenario-95ci.png')),
+       width = 5, height = 5, unit = 'in', dpi = 400)
 
 
 #* 2060 map of biomass by spp ----
-tabund_spatial <- list.files(here::here('outputs','wham_runs'),
+tabund_spatial <- list.files(files_to_run,
                              pattern = 'true_biomass_spatial.csv',
                              recursive = TRUE,
                              full.names = TRUE) %>%
@@ -158,19 +156,19 @@ ggsave(Rmisc::multiplot(plotlist = maplist, cols = 1),
        width = 3, height = 10, unit = 'in', dpi = 400)
 
 #* biomass timeseries by scenarios ----
-tabund <- list.files(here::here('outputs','wham_runs'),
+tabund <- list.files(files_to_run,
                      pattern ="*true_biomass\\b.csv",
                      recursive = TRUE,
                      full.names = TRUE) %>%
-  .[grepl('2024-04-30',.)] %>%
+  .[grepl('2024-05-06',.)] %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
   group_by(year,scenario, species) %>%
-  summarize(med=median(abund_mean)/1000,
-            lwr50=quantile(abund_mean, .25)/1000,
-            upr50=quantile(abund_mean, .75)/1000,
-            lwr95=quantile(abund_mean, .0275)/1000,
-            upr95=quantile(abund_mean, .975)/1000)
+  summarize(med=median(ssb_true )/1000,
+            lwr50=quantile(ssb_true , .25)/1000,
+            upr50=quantile(ssb_true , .75)/1000,
+            lwr95=quantile(ssb_true , .0275)/1000,
+            upr95=quantile(ssb_true , .975)/1000)
 
 
 
@@ -181,7 +179,7 @@ ggplot(tabund, aes(x = year, y = med, fill = scenario, color = scenario)) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
-  labs(x = 'Year', y = 'True Biomass (kmt)', color = '', fill = '') +
+  labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') +
   theme(legend.position = 'top')
   # theme_bw()
 
@@ -191,17 +189,23 @@ ggsave(last_plot(),
 
 #* survey time series by scenario ----
 
-sobs <- list.files(here::here('outputs','wham_runs'),
+sobs <- list.files(files_to_run,
            pattern = 'survey_obs_biomass.csv',
            recursive = TRUE,
            full.names = TRUE) %>%
-  lapply(., FUN = read.table, sep = ' ', header = TRUE) %>%
+  lapply(., FUN = read.csv) %>%
   bind_rows() %>%
-  mutate(abund_mean = abund_mean/1000)
+  mutate(abund_mean = abund_mean/1000) %>%
+  filter(replicate == 0)
 
 
-ggplot(sobs, aes(x = year, y = abund_mean , fill = scenario, color = scenario)) +
-  geom_point() + geom_line()+
+ggplot(sobs, aes(x = year,
+                 y = abund_mean ,
+                 group= interaction(replicate, scenario),
+                 fill = scenario,
+                 color = scenario)) +
+  geom_point() +
+  # geom_line()+
   geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
                     ymax =  abund_mean+abund_mean *abund_cv,
                     color = scenario ),
