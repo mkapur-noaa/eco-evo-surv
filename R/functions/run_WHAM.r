@@ -76,16 +76,15 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                model_name=file_suffix2,
-                               selectivity=list(model=c('logistic','age-specific'),
+                               selectivity=list(model=c('age-specific','age-specific'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-                                                                  rep(1, asap3$dat$n_ages)), ## alpha, b1, survey
-                                                fix_pars=list(NA,c(1:asap3$dat$n_ages))),
+                                                initial_pars=list(rep(1, asap3$dat$n_ages), ## fully selected fishery
+                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
+                                                fix_pars=list(NA,c(1:asap3$dat$n_ages))), ## fix 'em all
                                                 # selectivity=list(model=c('logistic','logistic'),
                                                 #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                                 #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
                                                 #                                    c(7,0.9))), ## alpha, b1, survey
-                                              , ## fix ages 1:11 for fish and b1 for survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
   exp(m1$par[grep('N1',names(m1$par))])
@@ -111,7 +110,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
              ssb_est_cv = std[ssb.ind, 2],
              lower = ssb_est - ssb_est*ssb_est_cv,
              upper = ssb_est + ssb_est*ssb_est_cv,
-             MRE = (ssb_est-abund_mean)/abund_mean,
+             MRE = (ssb_est-ssb_true)/ssb_true,
              MRE_scaled = 100*MRE)
   } else{
     ssb.ind <- m1$report()$SSB[1:length(m1$years)]
@@ -120,7 +119,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
              ssb_est_cv =NA,
              lower = ssb_est ,
              upper = ssb_est,
-             MRE = (ssb_est-abund_mean)/abund_mean,
+             MRE = (ssb_est-ssb_true)/ssb_true,
              MRE_scaled = 100*MRE)
   }
 
@@ -128,11 +127,11 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
 
 
-  cat(mean(mre_table$ssb_est/mre_table$abund_mean),"\n")
+  cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
 
 
   ssb_compare <-  mre_table %>%
-    select(year, abund_mean, ssb_est, lower, upper) %>%
+    select(year, ssb_true, ssb_est, lower, upper) %>%
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
     geom_line() +
@@ -145,7 +144,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
     labs(x = 'Assessment Year', y = 'SSB (kmt)') +
     theme(legend.position.inside = c(0.8,0.8)) +
     labs(color = '') +
-    scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$abund_mean)))
+    scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
 
   mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
