@@ -81,10 +81,10 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                                 initial_pars=list(rep(1, asap3$dat$n_ages), ## fully selected fishery
                                                                   rep(1, asap3$dat$n_ages)), ## fully selected survey
                                                 fix_pars=list(NA,c(1:asap3$dat$n_ages))), ## fix 'em all
-                                                # selectivity=list(model=c('logistic','logistic'),
-                                                #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-                                                #                                    c(7,0.9))), ## alpha, b1, survey
+                               # selectivity=list(model=c('logistic','logistic'),
+                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+                               #                                    c(7,0.9))), ## alpha, b1, survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
   exp(m1$par[grep('N1',names(m1$par))])
