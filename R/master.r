@@ -32,9 +32,10 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
-foreach(scenario=1) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
-  foreach(replicate=1)  %dopar%  {
+foreach(scenario=1:4) %:%
+  foreach(species = 1) %:%
+  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
+  foreach(replicate=1:5)  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
     scen_use = scenario; sp_use = species; replicate_use = replicate
@@ -56,28 +57,70 @@ stopImplicitCluster();stopCluster()
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3)%>%
-  .[grepl('2024-05-06/rep',.)]
+
+
+files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
+  .[grepl('2024-05-06/rep',.)] %>%
+  .[grepl('Herring',.)] %>%
+  .[!grepl('rep11',.)]
+
+
+cores <- detectCores() - 2
+cl <- makeCluster(cores)
+registerDoParallel(cl)
 
 foreach(file_use = files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
   run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
-           file_suffix = files_to_run[3])
+           file_suffix = file_use)
 } ## end files loop
-
+stopImplicitCluster();stopCluster()
 
 ## Summarize results across all species, scenarios, simulations ----
 
+#* MRE by rep, scenario, species
+mre_all <- list.files(files_to_run,
+           pattern = 'ssb_mre.csv',
+           recursive = TRUE,
+           full.names = TRUE) %>%
+  lapply(., FUN = read.csv) %>%
+  bind_rows() %>%
+  group_by(year,scenario, species) %>%
+  summarize(med=median(MRE_scaled),
+            lwr50=quantile(MRE_scaled, .25),
+            upr50=quantile(MRE_scaled, .75),
+            lwr95=quantile(MRE_scaled, .0275),
+            upr95=quantile(MRE_scaled, .975))
+
+
+ggplot(mre_all, aes(x = year, y = med,
+                    color = scenario, fill = scenario)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lwr50, ymax = upr50),
+              alpha = 0.2, color = NA) +
+  scale_y_continuous(limits = c(-100,100)) +
+  scale_fill_manual(values = scenPal, labels = scenLabs)+
+  scale_color_manual(values = scenPal, labels = scenLabs)+
+  labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
+  geom_hline(yintercept = 0, color = 'pink') +
+  facet_wrap(~species,labeller = as_labeller(sppLabs))
+
+
+
+ggsave(last_plot(),
+       file =here('figs','MRE_by_scenario'),
+       width = 3, height = 10, unit = 'in', dpi = 400)
+
+
 #* 2060 map of biomass by spp ----
-#*
 tabund_spatial <- list.files(here::here('outputs','wham_runs'),
                              pattern = 'true_biomass_spatial.csv',
                              recursive = TRUE,
                              full.names = TRUE) %>%
   lapply(., FUN = read.csv) %>% bind_rows() #%>%
-summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),
-          .by = c(year, species, scenario))
+# summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),
+#           .by = c(year, species, scenario))
 
 maplist = list()
 for(s in 1:4){
@@ -146,7 +189,7 @@ ggsave(last_plot(),
        file =here('figs','biomass_by_scenario_50ci.png'),
        width = 8, height = 3, unit = 'in', dpi = 400)
 
-## survey time series by scenario ---
+#* survey time series by scenario ----
 
 sobs <- list.files(here::here('outputs','wham_runs'),
            pattern = 'survey_obs_biomass.csv',
