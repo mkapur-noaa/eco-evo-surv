@@ -102,7 +102,9 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
-  if(m1$hessian){
+
+
+  if(m1$is_sdrep){
     std <- summary(m1$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(m1$years)]
     mre_table <- true_biomass[1:length(m1$years),] %>%
@@ -149,19 +151,19 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   write.csv(mre_table,paste0(wham.dir,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
 
-  png(file =  paste0(wham.dir,"/ssb_mre.png"),
+  png(file =  paste0(wham.dir,"/",file_suffix2,"-ssb_mre.png"),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(ssb_compare, mre, cols = 2)
   dev.off()
 
-
+  save(m1, file = paste0(wham.dir,'/model.rdata'))
   # WHAM output plots for best model with projections ----
   plot_wham_output(mod=m1,
                    res = 250,
                    dir.main = wham.dir) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
 
-  save(m1, file = paste0(wham.dir,'/model.rdata'))
+
 
 
 }
