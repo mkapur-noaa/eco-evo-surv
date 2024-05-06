@@ -210,7 +210,7 @@ build_Data<-function(scenario,
     ## calculate mature biomass by year, age
     mutate(ssb_age = value*maturity) %>%
     ## collapse across age/lat/long per year
-    summarise(ssb = sum(ssb_age),
+    summarise(ssb_true = sum(ssb_age),
               total_biomass=sum(value,na.rm = T),
               total_biomass_sd = sd(value, na.rm = T)*n()/sqrt(n()),
               total_biomass_cv = total_biomass_sd/total_biomass, .by = year) %>%
