@@ -27,7 +27,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   ## load asap3-style data file ----
   # copy templated asap3 data file to working directory
-  file.copy(from=file.path(here::here('data','wham_inputs','osmose_wham_template.dat')),
+  file.copy(from=file.path(here::here('osmose_wham_template.dat')),
             to=wham.dir, overwrite=TRUE)
   # read asap3 data file and convert to input list for wham
   setwd(wham.dir)
@@ -76,14 +76,18 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                model_name=file_suffix2,
-                               selectivity=list(model=c('logistic','logistic'),
+                               selectivity=list(model=c('logistic','age-specific'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                                 initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-                                                                  c(7,0.9))), ## alpha, b1, survey
+                                                                  rep(1, asap3$dat$n_ages))), ## alpha, b1, survey
+                               # selectivity=list(model=c('logistic','logistic'),
+                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+                               #                                    c(7,0.9))), ## alpha, b1, survey
                                                 # fix_pars=list(10,2)), ## fix ages 1:11 for fish and b1 for survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
-
+  exp(m1$par[grep('N1',names(m1$par))])
   # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
   check_convergence(m1)
 
@@ -98,17 +102,33 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
-  # calculate MRE, save figure and table
-  std <- summary(m1$sdrep)
-  ssb.ind <- which(rownames(std) == "log_SSB")[1:length(m1$years)]
+  if(m1$hessian){
+    std <- summary(m1$sdrep)
+    ssb.ind <- which(rownames(std) == "log_SSB")[1:length(m1$years)]
+    mre_table <- true_biomass[1:length(m1$years),] %>%
+      mutate(ssb_est = exp(std[ssb.ind, 1]) ,
+             ssb_est_cv = std[ssb.ind, 2],
+             lower = ssb_est - ssb_est*ssb_est_cv,
+             upper = ssb_est + ssb_est*ssb_est_cv,
+             MRE = (ssb_est-abund_mean)/abund_mean,
+             MRE_scaled = 100*MRE)
+  } else{
+    ssb.ind <- m1$report()$SSB[1:length(m1$years)]
+    mre_table <- true_biomass[1:length(m1$years),] %>%
+      mutate(ssb_est = ssb.ind ,
+             ssb_est_cv =NA,
+             lower = ssb_est ,
+             upper = ssb_est,
+             MRE = (ssb_est-abund_mean)/abund_mean,
+             MRE_scaled = 100*MRE)
+  }
 
-  mre_table <- true_biomass[1:length(m1$years),] %>%
-    mutate(ssb_est = exp(std[ssb.ind, 1]) ,
-           ssb_est_cv = std[ssb.ind, 2],
-           lower = ssb_est - ssb_est*ssb_est_cv,
-           upper = ssb_est + ssb_est*ssb_est_cv,
-           MRE = (ssb_est-abund_mean)/abund_mean,
-           MRE_scaled = 100*MRE)
+
+
+
+
+  cat(mean(mre_table$ssb_est/mre_table$abund_mean),"\n")
+
 
   ssb_compare <-  mre_table %>%
     select(year, abund_mean, ssb_est, lower, upper) %>%
