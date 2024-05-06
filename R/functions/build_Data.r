@@ -200,16 +200,34 @@ build_Data<-function(scenario,
     select(-month)
 
   ## extract and save the true total biomass and true SSB from the whole year
+
   true_biomass <- biomass %>%
-    group_by(year) %>%
-    summarise(abund_mean=sum(value,na.rm = T),
-              abund_sd = sd(value, na.rm = T)*n()/sqrt(n()),
-              abund_mean_cv = abund_sd/abund_mean) %>%
-    ungroup() %>%
-    mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
+    group_by(year, age) %>%
+    summarise(total_biomass=sum(value,na.rm = T),
+              total_biomass_sd = sd(value, na.rm = T)*n()/sqrt(n()),
+              total_biomass_cv = total_biomass_sd/total_biomass) %>%
+    merge(.,   maturity_data %>%
+            mutate(year = 2010:2100) %>%
+            reshape2::melt(id = 'year', value.name = 'maturity'),
+          by.x = c('year','age'), by.y = c('year','variable') ) %>%
+    mutate(ssb = sum(total_biomass*maturity), .by = c(year, age),
+           ssb_cv = total_biomass_cv)  %>%
+    mutate(abund_mean_rescale= rescale(total_biomass, to = c(0,1)),
            replicate = repID2,
            scenario = scen,
            species = spname)
+
+
+  # true_biomass <- biomass %>%
+  #   group_by(year) %>%
+  #   summarise(abund_mean=sum(value,na.rm = T),
+  #             abund_sd = sd(value, na.rm = T)*n()/sqrt(n()),
+  #             abund_mean_cv = abund_sd/abund_mean) %>%
+  #   ungroup() %>%
+  #   mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
+  #          replicate = repID2,
+  #          scenario = scen,
+  #          species = spname)
 
   write.csv(true_biomass,
             paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
