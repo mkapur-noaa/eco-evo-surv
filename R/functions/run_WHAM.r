@@ -141,7 +141,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
     scale_color_manual(values = c(scenLabs2$Pal[scenLabs2$Var2 == scen] ,
                                   'grey22'),
                        labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
-    labs(x = 'Assessment Year', y = 'SSB (kmt)') +
+    labs(x = 'Year', y = 'SSB (kmt)') +
     theme(legend.position.inside = c(0.8,0.8)) +
     labs(color = '') +
     scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
@@ -149,7 +149,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
     scale_y_continuous(limits = c(-100,100)) +
-    labs(x = 'Assessment Year', y = 'MRE SSB, %')+
+    labs(x = 'Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
   write.csv(mre_table,paste0(wham.dir,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)

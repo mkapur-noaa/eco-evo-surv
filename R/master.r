@@ -45,7 +45,7 @@ foreach(scenario=1) %:%
                yrs_use = 2010:2080, ## years to extract data for
                srv_selex = NULL, ## age at 50% selex
                obs_error = NULL, ## observation error for surveys
-               srv_selex = 7, ## age at 50% selex
+               # srv_selex = 7, ## age at 50% selex
                # obs_error = 0.2, ## observation error for surveys
                units = 'biomass',
                units_scalar = 1,
@@ -57,7 +57,7 @@ stopImplicitCluster();stopCluster()
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3)%>%
-  .[grepl('2024-05-03/rep',.)]
+  .[grepl('2024-05-06/rep',.)]
 
 foreach(file_use = files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
