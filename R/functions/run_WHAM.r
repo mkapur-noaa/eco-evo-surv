@@ -68,7 +68,6 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   asap3$dat$catch_cv <- matrix(0.1, nrow = asap3$dat$n_years)
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
 
-
   #* selex ----
   #* no time blocks on selex, no random effects
   #* fishery selex is age specific
@@ -80,7 +79,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                                 initial_pars=list(rep(1, asap3$dat$n_ages), ## fully selected fishery
                                                                   rep(1, asap3$dat$n_ages)), ## fully selected survey
-                                                fix_pars=list(NA,c(1:asap3$dat$n_ages))), ## fix 'em all
+                                                fix_pars=list(c(1:asap3$dat$n_ages),c(1:asap3$dat$n_ages))), ## fix 'em all
                                # selectivity=list(model=c('logistic','logistic'),
                                #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
                                #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
@@ -123,12 +122,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
              MRE_scaled = 100*MRE)
   }
 
-
-
-
-
   cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
-
 
   ssb_compare <-  mre_table %>%
     select(year, ssb_true, ssb_est, lower, upper) %>%
