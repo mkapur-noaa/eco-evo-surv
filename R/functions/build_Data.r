@@ -125,7 +125,7 @@ build_Data<-function(scenario,
   ## maturity (year x age) ----
 
   mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repID2,".csv")
-  read.csv(mat_path, skip = 1, header = T) %>%
+  maturity_data <- read.csv(mat_path, skip = 1, header = T) %>%
     reshape2::melt(id = c('Time','Age')) %>%
     filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
     mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
@@ -135,8 +135,8 @@ build_Data<-function(scenario,
     tidyr::complete(year = 2010:2099, Age = 1:max_age_pop,
                     fill = list(value = 1)) %>%
     tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
-    select(-year) %>%
-    write.table(.,
+    select(-year)
+    write.table(maturity_data,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
                 row.names = FALSE)
@@ -199,7 +199,7 @@ build_Data<-function(scenario,
     ungroup() %>%
     select(-month)
 
-  ## extract and save the true biomass from the whole year
+  ## extract and save the true total biomass and true SSB from the whole year
   true_biomass <- biomass %>%
     group_by(year) %>%
     summarise(abund_mean=sum(value,na.rm = T),
