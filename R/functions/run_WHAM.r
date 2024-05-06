@@ -75,11 +75,11 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                model_name=file_suffix2,
-                               selectivity=list(model=c('age-specific','age-specific'),
+                               selectivity=list(model=c('double-logistic','age-specific'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(rep(1, asap3$dat$n_ages), ## fully selected fishery
+                                                initial_pars=list(c(7,0.9,7,0.9), ## fully selected fishery
                                                                   rep(1, asap3$dat$n_ages)), ## fully selected survey
-                                                fix_pars=list(NA,
+                                                fix_pars=list(NULL,
                                                               c(1:asap3$dat$n_ages))), ## fix 'em all
                                # selectivity=list(model=c('logistic','logistic'),
                                #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
