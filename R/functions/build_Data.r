@@ -231,7 +231,7 @@ build_Data<-function(scenario,
     timestep_data_biom <- biomass[biomass$year == timestep, ]
 
     ## survey indices
-    # expand the mean and sd of the abundance for the selected cells
+    # DESIGN-BASED: expand the mean and sd of the abundance for the selected cells
     survey_biomass <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
       # filter(!is.na(value)) %>% ## remove NAs
       merge(., survey_selex, by = 'age') %>%
@@ -248,7 +248,7 @@ build_Data<-function(scenario,
         abund_se = term1*term2, ## Spencer method with finite pop correction term
         abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)), ## Oyafuso method
         #abund_cv = abund_sd/abund_mean  ## Oyafuso method
-        abund_cv = ifelse(abund_se/abund_mean < 0.1, 0.1, abund_se/abund_mean)
+        abund_cv = ifelse(abund_se/abund_mean < 0.05, 0.05, abund_se/abund_mean)
       ) %>%
       select(-term1, -term2) %>%
       mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
@@ -282,6 +282,12 @@ build_Data<-function(scenario,
     summarise(count = sum(count)) %>%
     select(year = timestep, age, count) %>%
     ungroup()
+
+  # results_df_age2 <- results_df_age %>%
+  #   mutate( scount = sum(count), .by = c(year)) %>%
+  #   mutate(freq = count/scount) %>%
+  #   mutate(sum(freq), .by = c(year))
+
 
   results_df_age %>%
     mutate( replicate = repID2,
@@ -481,7 +487,7 @@ build_Data<-function(scenario,
     geom_point(color = scenLabs2[scenario,'Pal'])+
     geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
                       ymax = abund_mean + abund_mean*abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
-    # geom_line(data = true_biomass, color = 'grey3')+
+    geom_line(data = true_biomass, color = 'grey3')+
     # geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
     #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
@@ -492,9 +498,8 @@ build_Data<-function(scenario,
 
   ## survey age comps
   comps <- results_df_age %>%
-    group_by(year) %>%
-    mutate(frequency = count / sum(count)) %>%
-    ungroup() %>%
+    mutate( scount = sum(count), .by = c(year)) %>%
+    mutate(frequency = count/scount)  %>%
     ggplot(.) +
     geom_area(alpha =0.4,
               aes(x = age, y = frequency,
@@ -512,7 +517,8 @@ build_Data<-function(scenario,
                                                                modification = "go_lighter",
                                                                n_colours = length(unique(results_df_age$year)),
                                                                view_palette = FALSE)) +
-    theme(legend.position = 'none', axis.text.y = element_blank())
+    theme(legend.position = 'none', axis.text.y = element_blank()) #+
+    # facet_wrap(~year)
 
 
   png(file =  paste0(wham.dir,"/",file_suffix,   '-survey_data.png'),
