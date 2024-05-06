@@ -202,16 +202,18 @@ build_Data<-function(scenario,
   ## extract and save the true total biomass and true SSB from the whole year
 
   true_biomass <- biomass %>%
-    group_by(year, age) %>%
-    summarise(total_biomass=sum(value,na.rm = T),
-              total_biomass_sd = sd(value, na.rm = T)*n()/sqrt(n()),
-              total_biomass_cv = total_biomass_sd/total_biomass) %>%
+    ## join with maturity data
     merge(.,   maturity_data %>%
             mutate(year = 2010:2100) %>%
             reshape2::melt(id = 'year', value.name = 'maturity'),
           by.x = c('year','age'), by.y = c('year','variable') ) %>%
-    mutate(ssb = sum(total_biomass*maturity), .by = c(year, age),
-           ssb_cv = total_biomass_cv)  %>%
+    ## calculate mature biomass by year, age
+    mutate(ssb_age = value*maturity) %>%
+    ## collapse across age/lat/long per year
+    summarise(ssb = sum(ssb_age),
+              total_biomass=sum(value,na.rm = T),
+              total_biomass_sd = sd(value, na.rm = T)*n()/sqrt(n()),
+              total_biomass_cv = total_biomass_sd/total_biomass, .by = year) %>%
     mutate(abund_mean_rescale= rescale(total_biomass, to = c(0,1)),
            replicate = repID2,
            scenario = scen,
@@ -505,7 +507,7 @@ build_Data<-function(scenario,
     geom_point(color = scenLabs2[scenario,'Pal'])+
     geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
                       ymax = abund_mean + abund_mean*abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
-    geom_line(data = true_biomass, color = 'grey3')+
+    # geom_line(data = true_biomass, color = 'grey3')+
     # geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
     #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
