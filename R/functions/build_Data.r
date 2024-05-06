@@ -186,7 +186,7 @@ build_Data<-function(scenario,
     summarise(max_age = max(age))
   max_age_survey <- as.numeric(max_age_survey)
 
-  total_area <- length(unique(abundance$lat))*length(unique(abundance$long)) ## total number of cells
+  total_area <- 632 ## total number of marine cells, aka dim (all_cells)
   biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
   biomass <- reshape2::melt(biomass0) %>%
     filter(!is.na(value) & Var3 <= max_age_pop) %>% ## drop land
@@ -233,7 +233,7 @@ build_Data<-function(scenario,
     ## survey indices
     # expand the mean and sd of the abundance for the selected cells
     survey_biomass <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
-      filter(!is.na(value)) %>% ## remove NAs
+      # filter(!is.na(value)) %>% ## remove NAs
       merge(., survey_selex, by = 'age') %>%
       group_by(lat, long) %>%
       summarise(station_abund = ifelse(is.null(obs_error),
@@ -241,7 +241,8 @@ build_Data<-function(scenario,
                                        rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
       ungroup() %>%
       summarise(
-        abund_mean = mean(station_abund)*total_area,
+        abund_mean0 = mean(station_abund),
+        abund_mean = abund_mean0*total_area,
         term1 = sd(station_abund, na.rm = T)*total_area/sqrt(nrow(selected_cells)),
         term2 = sqrt((total_area-nrow(selected_cells))/(total_area-1)),
         abund_se = term1*term2, ## Spencer method with finite pop correction term
@@ -402,10 +403,6 @@ build_Data<-function(scenario,
               paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),
               row.names = FALSE)
 
-  write.table(waa,
-              sep = ' ',
-              paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
-              row.names = FALSE)
 
   #*   catch WAA ----
   #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
@@ -413,6 +410,10 @@ build_Data<-function(scenario,
   #*   Only have biomass-at-age, total numbers, and mean size.
   #*   Avoid using population NAA and monkeying with selex.
   #*   FOR NOW, assume that the catch WAA matches the population
+  write.table(waa,
+              sep = ' ',
+              paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
+              row.names = FALSE)
 
   ## Summary figures and data ----
   #* Catch Figures ----
@@ -465,20 +466,29 @@ build_Data<-function(scenario,
     labs(x = 'Year', y = paste0('True Abundance ',
                                 ifelse(units == 'numbers','(millions)','(tons)')))
 
+  # true_biomass %>%
+  #   select(year, abund_mean) %>%
+  #   mutate(src = 'om') %>%
+  #   merge(.,results_df_index %>%
+  #           select(year, abund_mean) %>%
+  #           mutate(src = 'survy')  , by = 'year' ) %>%
+  #   mutate(ratio = abund_mean.x/abund_mean.y)
+
+
   index <- ggplot(results_df_index %>%
                     mutate(abund_mean_rescale = rescale(abund_mean, to = c(0,1))),
                   aes(x = year, y = abund_mean)) +
     geom_point(color = scenLabs2[scenario,'Pal'])+
     geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
                       ymax = abund_mean + abund_mean*abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
-    #geom_line(data = true_abund, color = 'grey3')+
+    geom_line(data = true_biomass, color = 'grey3')+
     #geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
     #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
     labs(x = 'Year', y = 'Biomass',
          title = paste0('Survey Index, coverage = ',
-                        round(nrow(survey_array[survey_array$year == 2010, ])/632,2)))
+                        round(nrow(survey_array[survey_array$year == 2010, ])/total_area,2)))
 
   ## survey age comps
   comps <- results_df_age %>%
