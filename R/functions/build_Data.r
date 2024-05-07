@@ -249,7 +249,7 @@ build_Data<-function(scenario,
       ungroup() %>%
       mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
 
-    results_index_gam[[paste(timestep)]] <- survey_biomass
+    results_index_gam[[paste(timestep)]] <- survey_biomass_gam
 
     # DESIGN-BASED: expand the mean and sd of the abundance for the selected cells
     survey_biomass <- survey_biomass_gam %>%
