@@ -11,8 +11,8 @@ build_survey_array <- function(n_years = length(2010:2099), fractional_coverage 
   all_cells <<- read.csv(here::here('data','northsea_latlong.csv')) ## only the marine bit
   # Function to sample 50% of the cells
   sample_cells <- function() {
-    sample_n <- nrow(all_cells) * fractional_coverage
-    sampled_cells <- sample_n(all_cells, sample_n)
+    sample_nn <- nrow(all_cells) * fractional_coverage
+    sampled_cells <- sample_n(all_cells, sample_nn)
     #return(sampled_cells)
   }
   # Replicate the sampling for each year
