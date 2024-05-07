@@ -311,13 +311,18 @@
 0.6 1 0 1
 4 1 0 1
 1.1 1 0 1
+0.5 1 0 1
+0.6 1 0 1
+4 1 0 1
+1.1 1 0 1
+1.1 1 0 1
 # Selectivity start age by fleet
 1
 # Selectivity end age by fleet
 6
 # Age range for average F
 5 6
-# Average F report option 
+# Average F report option
 1
 # Use likelihood constants?
 0
@@ -470,9 +475,9 @@
 1 1
 # Index month
 4 10
-# Index link to fleet? 
+# Index link to fleet?
 -1 -1
-# Index selectivity option 
+# Index selectivity option
 2 2
 # Index start age
 1 1
@@ -509,7 +514,7 @@
 4 1 0 1
 1.1 1 0 1
 # Index data matrices (n.ind.avail.*nyears)
-# Index   NEFSC_Spring 
+# Index   NEFSC_Spring
 1973 45993.28 0.2 912.7399 5523.301 15092.54 8483.272 6580.512 9400.921 50
 1974 18318.68 0.2 592.24 2507.73 2955.721 5699.85 3476.501 3086.641 50
 1975 4839.41 0.2 414.39 1513.06 451.44 584.7798 1049.59 826.1502 50
@@ -554,7 +559,7 @@
 2014 2678.693 0.2 14.00199 648.0608 551.7347 1134.175 230.2719 100.449 50
 2015 739.329 0.2 14.09198 18.97897 231.2457 192.7888 282.2236 0 50
 2016 545.663 0.2 133.3658 38.60593 76.04185 87.23885 97.0998 113.3108 50
-# Index   NEFSC_Fall 
+# Index   NEFSC_Fall
 1973 17342.97 0.2 2069.431 2610.771 5901.86 3233.42 2291.56 1235.93 50
 1974 7069.139 0.2 1016.72 1604.09 569.27 2240.8 948.7097 689.55 50
 1975 3338 0.2 1908.466 524.5617 193.2806 290.6209 277.3908 143.6804 50
@@ -605,9 +610,9 @@
 1
 # Phase for Fmult deviations
 3
-# Phase for recruitment deviations 
+# Phase for recruitment deviations
 3
-# Phase for N in 1st year 
+# Phase for N in 1st year
 2
 # Phase for catchability in 1st year
 1
@@ -668,9 +673,9 @@
 1 1
 # Lambda for Total catch in weight by fleet
 1
-# Lambda for total discards at age by fleet 
+# Lambda for total discards at age by fleet
 0
-# Catch Total CV by year and fleet 
+# Catch Total CV by year and fleet
 0.1
 0.1
 0.1
@@ -858,9 +863,9 @@
 0
 # CV for Fmult deviations
 1
-# Lambda for N in 1st year deviations 
+# Lambda for N in 1st year deviations
 0
-# CV for N in 1st year deviations 
+# CV for N in 1st year deviations
 1
 # Lambda for recruitment deviations
 1
@@ -876,11 +881,11 @@
 0
 # CV for deviation from initial steepness
 1
-# Lambda for deviation from initial SSB0 
+# Lambda for deviation from initial SSB0
 0
-# CV for deviation from initial SSB0 
+# CV for deviation from initial SSB0
 1
-# NAA Deviations flag (1=   , 0=  ) 
+# NAA Deviations flag (1=   , 0=  )
 1
 ###########################################
 ###  Initial Guesses
@@ -908,7 +913,7 @@
 1
 # Final year of projections
 2018
-# Year, projected recruits, what projected, target, non-directed Fmult 
+# Year, projected recruits, what projected, target, non-directed Fmult
 2017 -1 1 150 0
 2018 -1 3 -99 0
 ###########################################
@@ -940,5 +945,5 @@
 # Fleet Names
 fleet1
 # Survey Names
-NEFSC_Spring 
-NEFSC_Fall 
+NEFSC_Spring
+NEFSC_Fall
