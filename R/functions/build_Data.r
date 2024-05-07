@@ -310,16 +310,19 @@ build_Data<-function(scenario,
 
 
   #* combine & save indices ----
-  #** model-based  ----
+  #** model-based (gam) ----
   results_df_index_spatial <- do.call(rbind, results_index_gam)
 
-  #** design-based (gam)----
+  #** design-based ----
   results_df_index <- do.call(rbind, results_index)
   results_df_index %>%
-    mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
+    mutate(type = 'design-based',
+           abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
            replicate = repID2,
            scenario = scen,
            species = spname) %>%
+
+
     write.csv(.,
                 paste0(wham.dir,"/",file_suffix,'-survey_obs_biomass.csv'),
                 row.names = FALSE)
@@ -487,15 +490,6 @@ build_Data<-function(scenario,
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     labs(x = 'Year', y = paste0('True Abundance ',
                                 ifelse(units == 'numbers','(millions)','(tons)')))
-
-  # true_biomass %>%
-  #   select(year, abund_mean) %>%
-  #   mutate(src = 'om') %>%
-  #   merge(.,results_df_index %>%
-  #           select(year, abund_mean) %>%
-  #           mutate(src = 'survy')  , by = 'year' ) %>%
-  #   mutate(ratio = abund_mean.x/abund_mean.y)
-
 
   index <- ggplot(results_df_index %>%
                     mutate(abund_mean_rescale = rescale(abund_mean, to = c(0,1))),
