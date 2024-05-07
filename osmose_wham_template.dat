@@ -942,7 +942,7 @@
 # Phase for N in 1st year
 2
 # Phase for catchability in 1st year
-1
+-1
 # Phase for catchability deviations
 -1
 # Phase for stock recruit relationship
@@ -1443,7 +1443,7 @@
 # CV for deviation from initial SSB0
 1
 # NAA Deviations flag (1=   , 0=  )
-0
+1
 ###########################################
 ###  Initial Guesses
 # NAA for year1
