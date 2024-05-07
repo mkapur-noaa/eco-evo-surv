@@ -56,27 +56,28 @@ cv <- function(x) {
   return(y)
 }
 
+## datis the survey_obs_biomass (what the survey saw)
 get_gam_index <- function(dat, survey_timestep = 7,
                           grid = grid, sims_gratia = 10) {
   # dat is the data for a single species - here we use true values from a SRS that assumes every observation is of the true state.
   # survey_timestep is an index between 1 and 72 defining which bimonthly time point has data collected for it.
   # grid is the survey grid (the full area that we want to extrapolate to)
-  if (survey_timestep < 1 | survey_timestep > 24) {
-    stop("Survey timestep (when the survey happens) must be between 1 and 24, assuming data on true biomass are indexed every two weeks.")
-  }
+  # if (survey_timestep < 1 | survey_timestep > 24) {
+  #   stop("Survey timestep (when the survey happens) must be between 1 and 24, assuming data on true biomass are indexed every two weeks.")
+  # }
 
-  nyr <- max(dat$timestep) / 24
-  survsteps <- survey_timestep + seq(0, (nyr - 1) * 24, by = 24) # which timesteps have a survey in them
-
-  if (length(survsteps) == 0) {
-    stop("No years with survey data.")
-  }
-  survdat <- dat[which(dat$timestep %in% survsteps), ]
-
-  # survdat$year <- NA
-  for (i in 1:nrow(survdat)) {
-    survdat$year[i] <- which(survsteps == survdat$timestep[i])
-  }
+  # nyr <- max(dat$timestep) / 24
+  # survsteps <- survey_timestep + seq(0, (nyr - 1) * 24, by = 24) # which timesteps have a survey in them
+  #
+  # if (length(survsteps) == 0) {
+  #   stop("No years with survey data.")
+  # }
+  # survdat <- dat[which(dat$timestep %in% survsteps), ]
+  #
+  # # survdat$year <- NA
+  # for (i in 1:nrow(survdat)) {
+  #   survdat$year[i] <- which(survsteps == survdat$timestep[i])
+  # }
 
   mod <- gam(
     formula = true_biomass ~ as.factor(year) + # temporal
