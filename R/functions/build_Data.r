@@ -263,18 +263,12 @@ build_Data<-function(scenario,
       mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
 
     results_index_gam[[paste(timestep)]] <- survey_biomass
+
     # DESIGN-BASED: expand the mean and sd of the abundance for the selected cells
-    survey_biomass <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
-      # filter(!is.na(value)) %>% ## remove NAs
-      merge(., survey_selex, by = 'age') %>%
-      group_by(lat, long) %>%
-      summarise(station_abund = ifelse(is.null(obs_error),
-                                       sum(value*slx),
-                                       rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
-      ungroup() %>%
+    survey_biomass <- survey_biomass_gam %>%
       summarise(
         abund_mean_per_cell = mean(station_abund),
-        abund_mean = abund_mean0*total_area,
+        abund_mean = abund_mean_per_cell*total_area,
         term1 = sd(station_abund, na.rm = T)*total_area/sqrt(nrow(selected_cells)),
         term2 = sqrt((total_area-nrow(selected_cells))/(total_area-1)),
         abund_se = term1*term2, ## Spencer method with finite pop correction term
