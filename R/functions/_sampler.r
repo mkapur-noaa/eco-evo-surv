@@ -8,7 +8,7 @@
 build_survey_array <- function(n_years = length(2010:2099), fractional_coverage = 0.2){
   #Create a data frame with all combinations of lat and long
   # all_cells <- expand.grid(lat = 1:25, long = 1:52)
-  all_cells <- read.csv(here::here('data','northsea_latlong.csv')) ## only the marine bit
+  all_cells <<- read.csv(here::here('data','northsea_latlong.csv')) ## only the marine bit
   # Function to sample 50% of the cells
   sample_cells <- function() {
     sample_n <- nrow(all_cells) * fractional_coverage
