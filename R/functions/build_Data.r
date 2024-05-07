@@ -145,6 +145,7 @@ build_Data<-function(scenario,
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
   ## need numbers ('abundance') for ages, biomass for indices
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
+
   #* survey selectivity ----
   survey_selex <<- if(is.null(srv_selex)) {
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
@@ -152,6 +153,7 @@ build_Data<-function(scenario,
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex))))
   }
 
+  #* filepaths for abundance, biomass ----
   age_spatial_path <- list.files(dirtmp,
                                  pattern = paste0('spatial_abundancebyAge-',spname),
                                  recursive = T,
@@ -199,8 +201,7 @@ build_Data<-function(scenario,
     ungroup() %>%
     select(-month)
 
-  ## extract and save the true total biomass and true SSB from the whole year
-
+  #* true biomass, SSB ----
   true_biomass <- biomass %>%
     ## join with maturity data
     merge(.,   maturity_data %>%
@@ -223,6 +224,7 @@ build_Data<-function(scenario,
             paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
             row.names = FALSE)
 
+  #* run survey ----
   # Initialize an empty list to store the results
   results_age <- results_index <- results_index_gam <- list()
 
@@ -284,6 +286,7 @@ build_Data<-function(scenario,
     } ## end stations loop for age comps
   } ## end timesteps loop for survey data
 
+  #* combine & save agecomps ----
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
     filter(age <= max_age_survey)
@@ -296,12 +299,6 @@ build_Data<-function(scenario,
     select(year = timestep, age, count) %>%
     ungroup()
 
-  # results_df_age2 <- results_df_age %>%
-  #   mutate( scount = sum(count), .by = c(year)) %>%
-  #   mutate(freq = count/scount) %>%
-  #   mutate(sum(freq), .by = c(year))
-
-
   results_df_age %>%
     mutate( replicate = repID2,
            scenario = scen,
@@ -310,8 +307,14 @@ build_Data<-function(scenario,
                 paste0(wham.dir,"/",file_suffix,'-survey_obs_agecomp-numbers.csv'),
                 row.names = FALSE)
 
-  results_df_index <- do.call(rbind, results_index)
 
+
+  #* combine & save indices ----
+  #** model-based  ----
+  results_df_index_spatial <- do.call(rbind, results_index_gam)
+
+  #** design-based (gam)----
+  results_df_index <- do.call(rbind, results_index)
   results_df_index %>%
     mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
            replicate = repID2,
