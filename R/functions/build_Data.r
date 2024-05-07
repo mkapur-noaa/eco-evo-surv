@@ -219,18 +219,6 @@ build_Data<-function(scenario,
            scenario = scen,
            species = spname)
 
-
-  # true_biomass <- biomass %>%
-  #   group_by(year) %>%
-  #   summarise(abund_mean=sum(value,na.rm = T),
-  #             abund_sd = sd(value, na.rm = T)*n()/sqrt(n()),
-  #             abund_mean_cv = abund_sd/abund_mean) %>%
-  #   ungroup() %>%
-  #   mutate(abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
-  #          replicate = repID2,
-  #          scenario = scen,
-  #          species = spname)
-
   write.csv(true_biomass,
             paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
             row.names = FALSE)
