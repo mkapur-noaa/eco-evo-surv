@@ -35,7 +35,7 @@ registerDoParallel(cl)
 foreach(scenario=1:4) %:%
   foreach(species = 1) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
-  foreach(replicate=1:5)  %dopar%  {
+  foreach(replicate=14:17)  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
     scen_use = scenario; sp_use = species; replicate_use = replicate
@@ -57,11 +57,12 @@ stopImplicitCluster();stopCluster()
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-
+greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-06/rep',.)] %>%
-  .[grepl('Herring',.)]
+  .[grepl('2024-05-07/rep',.)] %>%
+  .[grepl('Herring',.)] %>%
+  .[!grepl(greppy, .)]
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
@@ -71,7 +72,7 @@ foreach(file_use = files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
   run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
-           file_suffix = files_to_run[15])
+           file_suffix = file_use)
 } ## end files loop
 stopImplicitCluster();stopCluster()
 
