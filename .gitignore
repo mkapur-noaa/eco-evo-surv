@@ -2,6 +2,7 @@ MixFishSim/
 *jkbest2
 *dep
 *rdata
+*.RdataTmp*
 *chukchi*
 *figs*
 *data/*
