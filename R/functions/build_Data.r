@@ -252,15 +252,17 @@ build_Data<-function(scenario,
 
     ## survey indices
     # MODEL_BASED: generate the spatialized survey data; pass to GAM once all years ready
-    survey_biomass <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
+    survey_biomass_gam <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
       # filter(!is.na(value)) %>% ## remove NAs
       merge(., survey_selex, by = 'age') %>%
       group_by(lat, long) %>%
       summarise(station_abund = ifelse(is.null(obs_error),
                                        sum(value*slx),
                                        rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
-      ungroup()
+      ungroup() %>%
+      mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
 
+    results_index_gam[[paste(timestep)]] <- survey_biomass
     # DESIGN-BASED: expand the mean and sd of the abundance for the selected cells
     survey_biomass <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
       # filter(!is.na(value)) %>% ## remove NAs
