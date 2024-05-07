@@ -261,7 +261,7 @@ build_Data<-function(scenario,
                                        rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
       ungroup() %>%
       summarise(
-        abund_mean0 = mean(station_abund),
+        abund_mean_per_cell = mean(station_abund),
         abund_mean = abund_mean0*total_area,
         term1 = sd(station_abund, na.rm = T)*total_area/sqrt(nrow(selected_cells)),
         term2 = sqrt((total_area-nrow(selected_cells))/(total_area-1)),
