@@ -35,7 +35,7 @@ registerDoParallel(cl)
 foreach(scenario=1:4) %:%
   foreach(species = 1) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
-  foreach(replicate=14:17)  %dopar%  {
+  foreach(replicate=1)  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
     scen_use = scenario; sp_use = species; replicate_use = replicate
@@ -60,9 +60,9 @@ stopImplicitCluster();stopCluster()
 greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-07/rep',.)] %>%
-  .[grepl('Herring',.)] %>%
-  .[!grepl(greppy, .)]
+  .[grepl('2024-05-08/rep',.)] %>%
+  .[grepl('Herring',.)] #%>%
+  # .[!grepl(greppy, .)]
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
@@ -98,7 +98,7 @@ ggplot(mre_all, aes(x = year, y = med,
   geom_line() +
   geom_ribbon(aes(ymin = lwr95, ymax = upr95),
               alpha = 0.15, color = NA) +
-  scale_y_continuous(limits = c(-100,100)) +
+  # scale_y_continuous(limits = c(-100,100)) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
@@ -133,7 +133,7 @@ for(s in 1:4){
     theme_void()+
     geom_raster()+
     # scale_fill_viridis_c(na.value = NA)+
-    scale_fill_gradient2(low = "#efeee7", mid = alpha(scenPal[s],0.2), high = scenPal[s])+
+    scale_fill_gradient2(low = "#efeee7", mid = alpha('yellow',0.2), high = scenPal[s])+
     theme(
       legend.background = element_blank(),
       plot.background = element_blank(),
@@ -161,7 +161,7 @@ tabund <- list.files(files_to_run,
                      pattern ="*true_biomass\\b.csv",
                      recursive = TRUE,
                      full.names = TRUE) %>%
-  .[grepl('2024-05-06',.)] %>%
+  # .[grepl('2024-05-06',.)] %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
   group_by(year,scenario, species) %>%
