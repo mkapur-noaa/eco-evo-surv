@@ -64,14 +64,15 @@ scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: r
 scenLabs2 <- data.frame(cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal)))
 sppPal <- gplots::rich.colors(n = 13)
 
-fractional_coverage_use <<- 1
-survey_array <- build_survey_array(fractional_coverage = fractional_coverage_use) ## use close to 1 so CV is not 0
+## build survey arrays at many coverage types for lookup
+## this ensures that for a given coverage fraction, the exact same design
+## is used for every species, scenario, and replicate
 
-write.table(survey_array,
-            sep = ',',
-            here::here('outputs','wham_runs',paste0(Sys.Date(),'-survey_array_',
-                                                    fractional_coverage_use,'.csv')),
-            row.names = FALSE)
+sapply(x=seq(0.05,1,0.05), FUN = build_survey_array(fractional_coverage =x ))
+
+survey_array <- build_survey_array(fractional_coverage = fractional_coverage_use)
+
+
 
 # https://stackoverflow.com/questions/48297440/list-files-recursive-up-to-a-certain-level-in-r
 list.dirs.depth.n <- function(p, n) {
