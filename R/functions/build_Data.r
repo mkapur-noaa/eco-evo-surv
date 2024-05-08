@@ -19,17 +19,20 @@ build_Data<-function(scenario,
                      yrs_use = 2010:2080,
                      srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=11)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
+                     fractional_coverage_use = 0.5, ## fractional coverage of survey
                      units = 'biomass', ## units for survey observations
                      units_scalar = 1,
                      do_GAM = FALSE) ## whether or not to invoke spatial standardization
 {
+
+  survey_array <- read.csv(here::here('outputs','wham_runs',paste0('2024-05-08-survey_array_',fractional_coverage_use,'.csv')))
 
   ## string designators
   scen <- scenLabs2[scenario,2]
   repID2 <- sort(as.character(0:28))[repID]
   spname <- sppLabs2[sppIdx,2]
 
-  file_suffix <- paste(spname,scen,repID2,fractional_coverage_use,sep = '-')
+  file_suffix <- paste(spname,scen,repID2,sep = '-')
 
   ## where the raw evOsmose outputs are stored
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
@@ -290,7 +293,6 @@ build_Data<-function(scenario,
   # Combine the results into a single data frame
   results_df_age_spatial <- do.call(rbind, results_age) %>%
     filter(age <= max_age_survey)
-  #mutate(count = ifelse(age <= max_age_pop, count, -999)) ## blank data for unused ages
 
   # Aggregate the agecomp data by timestep and age, summing the count (collapse space)
   results_df_age <- results_df_age_spatial %>%
@@ -304,10 +306,9 @@ build_Data<-function(scenario,
            scenario = scen,
            species = spname) %>%
     write.csv(.,
-                paste0(wham.dir,"/",file_suffix,'-survey_obs_agecomp-numbers.csv'),
+                paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use,
+                '-survey_obs_agecomp-numbers.csv'),
                 row.names = FALSE)
-
-
 
   #* combine & save indices ----
   #** model-based (gam) ----
@@ -324,7 +325,8 @@ build_Data<-function(scenario,
 
 
     write.csv(.,
-                paste0(wham.dir,"/",file_suffix,'-survey_obs_biomass.csv'),
+                paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use,
+                       '-survey_obs_biomass.csv'),
                 row.names = FALSE)
 
 
@@ -350,7 +352,8 @@ build_Data<-function(scenario,
   # save the results
   write.table(survey_results,
               sep = ' ',
-              paste0(wham.dir,"/",file_suffix,'-wham_survey.csv'),
+              paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use,
+                     '-wham_survey.csv'),
               row.names = FALSE)
 
 
@@ -530,7 +533,8 @@ build_Data<-function(scenario,
     # facet_wrap(~year)
 
 
-  png(file =  paste0(wham.dir,"/",file_suffix,   '-survey_data.png'),
+  png(file =  paste0(wham.dir,"/",file_suffix, '-',fractional_coverage_use,
+                     '-survey_data.png'),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(map, index, comps, cols = 3)
   # Rmisc::multiplot(map, index, cols = 2)
