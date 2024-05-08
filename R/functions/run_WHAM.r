@@ -70,8 +70,6 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   #* selex ----
   #* no time blocks on selex, no random effects
-  #* fishery selex is age specific
-  #* survey selex is logistic
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                model_name=file_suffix2,
@@ -106,6 +104,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                #                                    c(7,0.9))), ## alpha, b1, survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
+  check_convergence(m2)
 
   input3 <- prepare_wham_input(asap3,
                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
@@ -122,7 +121,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                #                                    c(7,0.9))), ## alpha, b1, survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
-
+  check_convergence(m3)
 
   # input4 <- prepare_wham_input(asap3,
   #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
@@ -132,21 +131,24 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
   #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
   #                                               fix_pars=list(NULL,
-  #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
+  #                                                            NULL)),
   #                              # selectivity=list(model=c('logistic','logistic'),
   #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
   #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
   #                              #                                    c(7,0.9))), ## alpha, b1, survey
   #                              NAA_re = list(sigma="rec", cor="iid"))
   # m4 <- fit_wham(input4, do.osa = F) # turn off OSA residuals to save time
+  # check_convergence(m4)
 
   # Save list of all fit models
-  # mods <- list(m1=m1, m2=m2, m3=m3, m4=m4)
-  # save("mods", file="ex1_models.RData")
+  mods <- list(m1=m1, m2=m2, m3=m3)
+  # save("mods", file=  paste0(wham.dir,"/",file_suffix2,"-all_models.Rdata")
 
   # Compare models by AIC and Mohn's rho
-  # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
-  # res$best
+  res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
+  res$best
+
+
 
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
@@ -194,6 +196,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
+    scale_x_continuous(limits = c(2040,2099))+
     scale_y_continuous(limits = c(-100,100)) +
     labs(x = 'Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
