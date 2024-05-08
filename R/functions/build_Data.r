@@ -497,7 +497,7 @@ build_Data<-function(scenario,
     geom_point(color = scenLabs2[scenario,'Pal'])+
     geom_errorbar(aes(ymin = abund_mean - abund_mean*abund_cv,
                       ymax = abund_mean + abund_mean*abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
-    # geom_line(data = true_biomass, color = 'grey3')+
+    geom_line(data = true_biomass, color = 'grey70')+
     # geom_errorbar(aes(ymin = abund_mean_rescale - abund_cv,
     #ymax = abund_mean_rescale + abund_cv), width = 0, color = scenLabs2[scenario,'Pal']) +
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
