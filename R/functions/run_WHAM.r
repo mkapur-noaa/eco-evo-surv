@@ -2,8 +2,8 @@
 ## script to take formatted data and build, execute WHAM input files
 
 run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
-                      file_suffix = NULL
-                   ){
+                    file_suffix = NULL
+){
 
   filen2 <- basename(dirname(dirname(file_suffix)))
   scen <-   strsplit(filen2,'-')[[1]][2]
@@ -52,7 +52,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
 
-    #* initial pars ----
+  #* initial pars ----
   asap3$dat$N1_ini <- as.matrix(N_init, nrow = 1)
   ## asap3$dat$F1_ini
 
@@ -75,9 +75,9 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   input1 <- prepare_wham_input(asap3,
                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                model_name=file_suffix2,
-                               selectivity=list(model=c('double-logistic','age-specific'),
+                               selectivity=list(model=c('logistic','age-specific'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(c(7,0.9,7,0.9), ## fully selected fishery
+                                                initial_pars=list(c(7,0.9), ## fully selected fishery
                                                                   rep(1, asap3$dat$n_ages)), ## fully selected survey
                                                 fix_pars=list(NULL,
                                                               c(1:asap3$dat$n_ages))), ## fix 'em all
@@ -90,6 +90,55 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # exp(m1$par[grep('N1',names(m1$par))])
   # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
   check_convergence(m1)
+
+  input2 <- prepare_wham_input(asap3,
+                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+                               model_name=file_suffix2,
+                               selectivity=list(model=c('double-logistic','age-specific'),
+                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                                                initial_pars=list(c(7,0.9,7,0.9), ## fully selected fishery
+                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
+                                                fix_pars=list(NULL,
+                                                              c(1:asap3$dat$n_ages))), ## fix 'em all
+                               # selectivity=list(model=c('logistic','logistic'),
+                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+                               #                                    c(7,0.9))), ## alpha, b1, survey
+                               NAA_re = list(sigma="rec", cor="iid"))
+  m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
+
+  input3 <- prepare_wham_input(asap3,
+                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+                               model_name=file_suffix2,
+                               selectivity=list(model=c('age-specific','age-specific'),
+                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                                                initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
+                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
+                                                fix_pars=list(NULL,
+                                                              c(1:asap3$dat$n_ages))), ## fix 'em all
+                               # selectivity=list(model=c('logistic','logistic'),
+                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+                               #                                    c(7,0.9))), ## alpha, b1, survey
+                               NAA_re = list(sigma="rec", cor="iid"))
+  m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
+
+
+  # input4 <- prepare_wham_input(asap3,
+  #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                              model_name=file_suffix2,
+  #                              selectivity=list(model=c('age-specific','age-specific'),
+  #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
+  #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  #                                               fix_pars=list(NULL,
+  #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
+  #                              # selectivity=list(model=c('logistic','logistic'),
+  #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+  #                              #                                    c(7,0.9))), ## alpha, b1, survey
+  #                              NAA_re = list(sigma="rec", cor="iid"))
+  # m4 <- fit_wham(input4, do.osa = F) # turn off OSA residuals to save time
 
   # Save list of all fit models
   # mods <- list(m1=m1, m2=m2, m3=m3, m4=m4)
@@ -175,32 +224,32 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 #            file = here::here('data','wham_inputs','mortality_26.csv'), row.names = FALSE)
 
 #write.table(matrix(c(asap3$dat$maturity[1,1:5], rep(0.9999, asap3$dat$n_ages-5)),
-              #   byrow = TRUE,
-      #           nrow = asap3$dat$n_years,
-   #              ncol = asap3$dat$n_ages),
-     #     sep = ' ',
-  #        file = here::here('data','wham_inputs','maturity_26.csv'), row.names = FALSE)
+#   byrow = TRUE,
+#           nrow = asap3$dat$n_years,
+#              ncol = asap3$dat$n_ages),
+#     sep = ' ',
+#        file = here::here('data','wham_inputs','maturity_26.csv'), row.names = FALSE)
 
 #write.table(matrix(cbind(asap3$dat$WAA_mats[[1]],
- #                      matrix(rep(asap3$dat$WAA_mats[[1]][,6],asap3$dat$n_ages-5),
-   #                           ncol = asap3$dat$n_ages)),
-  #                 ncol = asap3$dat$n_ages),
-   #       sep = ' ',
- #         file = here::here('data','wham_inputs','waa_17.csv'), row.names = FALSE)
+#                      matrix(rep(asap3$dat$WAA_mats[[1]][,6],asap3$dat$n_ages-5),
+#                           ncol = asap3$dat$n_ages)),
+#                 ncol = asap3$dat$n_ages),
+#       sep = ' ',
+#         file = here::here('data','wham_inputs','waa_17.csv'), row.names = FALSE)
 
 #write.table(round(matrix(byrow = TRUE, cbind(asap3$dat$CAA_mats[[1]][,1:6],
-                    #   matrix(rep(asap3$dat$CAA_mats[[1]][,6],11),
-            #                  byrow = TRUE,
-                     #         ncol = 11),
-           #            asap3$dat$CAA_mats[[1]][,7]),
-         #          ncol = 1+asap3$dat$n_ages)),
+#   matrix(rep(asap3$dat$CAA_mats[[1]][,6],11),
+#                  byrow = TRUE,
+#         ncol = 11),
+#            asap3$dat$CAA_mats[[1]][,7]),
+#          ncol = 1+asap3$dat$n_ages)),
 
-          #  sep = ' ',
-    ##      file = here::here('data','wham_inputs','caa_17.csv'), row.names = FALSE)
+#  sep = ' ',
+##      file = here::here('data','wham_inputs','caa_17.csv'), row.names = FALSE)
 
 #write.table(matrix(0, ncol = 1+asap3$dat$n_ages, nrow = asap3$dat$n_years),
-      #      sep = ' ',
-          #file = here::here('data','wham_inputs','discards_17.csv'), row.names = FALSE)
+#      sep = ' ',
+#file = here::here('data','wham_inputs','discards_17.csv'), row.names = FALSE)
 #
 # asap3$dat$IAA_mats
 # asap3$dat$index_acomp_units
