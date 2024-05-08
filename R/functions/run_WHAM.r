@@ -49,7 +49,6 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   asap3$dat$index_month <- 7
   asap3$dat$use_index_acomp <- 1
   asap3$dat$use_index <- 1
-
   asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
 
   #* initial pars ----
@@ -65,7 +64,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
   asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
   asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
-  asap3$dat$catch_cv <- matrix(0.1, nrow = asap3$dat$n_years)
+  asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
 
   #* selex ----
@@ -106,22 +105,22 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
   check_convergence(m2)
 
-  input3 <- prepare_wham_input(asap3,
-                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-                               model_name=file_suffix2,
-                               selectivity=list(model=c('age-specific','age-specific'),
-                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
-                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
-                                                fix_pars=list(NULL,
-                                                              c(1:asap3$dat$n_ages))), ## fix 'em all
-                               # selectivity=list(model=c('logistic','logistic'),
-                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-                               #                                    c(7,0.9))), ## alpha, b1, survey
-                               NAA_re = list(sigma="rec", cor="iid"))
-  m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
-  check_convergence(m3)
+  # input3 <- prepare_wham_input(asap3,
+  #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                              model_name=file_suffix2,
+  #                              selectivity=list(model=c('age-specific','age-specific'),
+  #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
+  #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  #                                               fix_pars=list(NULL,
+  #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
+  #                              # selectivity=list(model=c('logistic','logistic'),
+  #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+  #                              #                                    c(7,0.9))), ## alpha, b1, survey
+  #                              NAA_re = list(sigma="rec", cor="iid"))
+  # m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
+  # check_convergence(m3)
 
   # input4 <- prepare_wham_input(asap3,
   #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
@@ -141,24 +140,24 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # check_convergence(m4)
 
   # Save list of all fit models
-  mods <- list(m1=m1, m2=m2, m3=m3)
+  mods <- list(m1=m1, m2=m2)
   # save("mods", file=  paste0(wham.dir,"/",file_suffix2,"-all_models.Rdata")
 
   # Compare models by AIC and Mohn's rho
   res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
   res$best
 
-
+  mod_use <- m2
 
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
 
 
-  if(m1$is_sdrep){
-    std <- summary(m1$sdrep)
-    ssb.ind <- which(rownames(std) == "log_SSB")[1:length(m1$years)]
-    mre_table <- true_biomass[1:length(m1$years),] %>%
+  if(mod_use$is_sdrep){
+    std <- summary(mod_use$sdrep)
+    ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
+    mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = exp(std[ssb.ind, 1]) ,
              ssb_est_cv = std[ssb.ind, 2],
              lower = ssb_est - ssb_est*ssb_est_cv,
@@ -166,8 +165,8 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
              MRE = (ssb_est-ssb_true)/ssb_true,
              MRE_scaled = 100*MRE)
   } else{
-    ssb.ind <- m1$report()$SSB[1:length(m1$years)]
-    mre_table <- true_biomass[1:length(m1$years),] %>%
+    ssb.ind <- mod_use$report()$SSB[1:length(mod_use$years)]
+    mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = ssb.ind ,
              ssb_est_cv =NA,
              lower = ssb_est ,
@@ -196,7 +195,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
-    scale_x_continuous(limits = c(2040,2099))+
+    # scale_x_continuous(limits = c(2040,2099))+
     scale_y_continuous(limits = c(-100,100)) +
     labs(x = 'Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
@@ -208,9 +207,9 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   Rmisc::multiplot(ssb_compare, mre, cols = 2)
   dev.off()
 
-  save(m1, file = paste0(wham.dir,'/model.rdata'))
+  save(mod_use, file = paste0(wham.dir,'/model.rdata'))
   # WHAM output plots for best model with projections ----
-  plot_wham_output(mod=m1,
+  plot_wham_output(mod=mod_use,
                    res = 250,
                    dir.main = wham.dir) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
