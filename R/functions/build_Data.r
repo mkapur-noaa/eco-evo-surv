@@ -19,7 +19,7 @@ build_Data<-function(scenario,
                      yrs_use = 2010:2080,
                      srv_selex = 11, ## whether or not survey sampled with age-based selex (logistic with A50=11)
                      obs_error = 0.2, ## whether or not survey sampled with observation error
-                     fractional_coverage_use = 0.5, ## fractional coverage of survey
+                     fractional_coverage_use = 1, ## fractional coverage of survey
                      units = 'biomass', ## units for survey observations
                      units_scalar = 1,
                      do_GAM = FALSE) ## whether or not to invoke spatial standardization
@@ -483,7 +483,7 @@ build_Data<-function(scenario,
     # scale_fill_viridis_c(na.value = NA)+
     scale_fill_gradient2(mid = "#FFF5D1",
                          low = "#efeee7",
-                         high = scenPal[scenario])+
+                         high = scenLabs2$Pal[scenario])+
     theme(strip.text = element_text(size = 25),
           strip.text.y = element_blank(),
           legend.position = 'none')+
