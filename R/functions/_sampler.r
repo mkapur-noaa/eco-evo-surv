@@ -17,7 +17,7 @@ build_survey_array <- function(n_years = length(2010:2099), fractional_coverage 
   # Add the year to each sampled data frame and bind them all together
   survey_array0 <- do.call(rbind, lapply(seq_along(survey_array0), function(i){cbind(year = 2010 + i - 1, survey_array0[[i]])}))
   #return(survey_array0)
-  write.table(survey_array,
+  write.table(survey_array0,
               sep = ',',
               here::here('outputs','wham_runs',paste0(Sys.Date(),'-survey_array_',
                                                       fractional_coverage,'.csv')),
