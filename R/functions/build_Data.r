@@ -29,7 +29,7 @@ build_Data<-function(scenario,
   repID2 <- sort(as.character(0:28))[repID]
   spname <- sppLabs2[sppIdx,2]
 
-  file_suffix <- paste(spname,scen,repID2,sep = '-')
+  file_suffix <- paste(spname,scen,repID2,fractional_coverage_use,sep = '-')
 
   ## where the raw evOsmose outputs are stored
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
@@ -503,8 +503,7 @@ build_Data<-function(scenario,
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
     labs(x = 'Year', y = 'Biomass',
-         title = paste0('Survey Index, coverage = ',
-                        round(nrow(survey_array[survey_array$year == 2010, ])/total_area,2)))
+         title = paste0('Survey Index, coverage = ', fractional_coverage_use,2))
 
   ## survey age comps
   comps <- results_df_age %>%
