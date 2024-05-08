@@ -56,9 +56,12 @@ cv <- function(x) {
   return(y)
 }
 
-## datis the survey_obs_biomass (what the survey saw)
-get_gam_index <- function(dat, survey_timestep = 7,
-                          grid = grid, sims_gratia = 10) {
+## dat is the survey_obs_biomass (what the survey saw)
+get_gam_index <- function(survdat = dat,  ## full time series of spatialized survey obs
+                          surv_ratio = nrow(survey_array[survey_array$year == 2010, ])/total_area, ## proportional coverage of survey
+                          survey_timestep = 7,
+                          grid = grid,
+                          sims_gratia = 10) {
   # dat is the data for a single species - here we use true values from a SRS that assumes every observation is of the true state.
   # survey_timestep is an index between 1 and 72 defining which bimonthly time point has data collected for it.
   # grid is the survey grid (the full area that we want to extrapolate to)
@@ -80,9 +83,9 @@ get_gam_index <- function(dat, survey_timestep = 7,
   # }
 
   mod <- gam(
-    formula = true_biomass ~ as.factor(year) + # temporal
-      s(lon, lat, bs = c("ts")) + # spatial
-      s(lon, lat, bs = c("ts"), by = as.factor(year), id = 1), # spatiotemporal
+    formula = station_abund ~ as.factor(year) + # temporal
+      s(long, lat, bs = c("ts")) + # spatial
+      s(long, lat, bs = c("ts"), by = as.factor(year), id = 1), # spatiotemporal
     family = tw(link = "log"),
     data = survdat
   )
@@ -124,7 +127,7 @@ sprat_idx <- get_gam_index(dat = single_sp, survey_timestep = 12, grid = grid, s
 
 db <- sprat_idx$survey_data |>
   group_by(year) |>
-  summarize(idx = sum(true_biomass), #These say "true" but don't be fooled! They're only calculated from a subset of the data!
+  summarize(idx = 1/surv_ratio*sum(true_biomass), #These say "true" but don't be fooled! They're only calculated from a subset of the data!
             sd = sd(true_biomass),
             cv = cv(true_biomass))
 
