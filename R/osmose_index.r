@@ -14,7 +14,7 @@ library(mgcv)
 library(gratia)
 library(here)
 
-raw <- read.csv(here::here("data", "sampler_raw.csv")) # From Maia Feb 6 2024
+raw <- read.csv(here::here("data","demo_data", "sampler_raw.csv")) # From Maia Feb 6 2024
 
 # Data description
 # lat: 52 vertical latitudinal cells
@@ -56,7 +56,8 @@ cv <- function(x) {
   return(y)
 }
 
-get_gam_index <- function(dat, survey_timestep = 12, grid = grid, sims_gratia = 10) {
+get_gam_index <- function(dat, survey_timestep = 7,
+                          grid = grid, sims_gratia = 10) {
   # dat is the data for a single species - here we use true values from a SRS that assumes every observation is of the true state.
   # survey_timestep is an index between 1 and 72 defining which bimonthly time point has data collected for it.
   # grid is the survey grid (the full area that we want to extrapolate to)
