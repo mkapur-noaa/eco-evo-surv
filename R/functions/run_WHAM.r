@@ -2,6 +2,7 @@
 ## script to take formatted data and build, execute WHAM input files
 
 run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
+                    fractional_coverage_use = 1,
                     file_suffix = NULL
 ){
 
@@ -10,15 +11,20 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   repID2 <- as.numeric(gsub('rep','',basename(file_suffix)))
   spname <-   strsplit(filen2,'-')[[1]][1]
 
-  file_suffix2 <- paste0(filen2,'-',repID2)
+  file_suffix2 <- paste0(filen2,'-',repID2) ## append to filenames
+  wham.dir <- file_suffix ## where to read things from
 
-  wham.dir <- file_suffix
+  ## subfolder with fractional coverage
+  filen3 <- ifelse(fractional_coverage_use==1,
+                   'perfect_information',
+                   paste0("fractional_coverage=", fractional_coverage_use))
+  wham.dir.save <- paste0(file_suffix,"/",filen3); dir.create(wham.dir.save)
 
   ## load input data ----
   mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
   catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
-  survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
+  survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-',fractional_coverage_use,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
   # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
   waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
@@ -202,16 +208,16 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   write.csv(mre_table,paste0(wham.dir,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
 
-  png(file =  paste0(wham.dir,"/",file_suffix2,"-ssb_mre.png"),
+  png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(ssb_compare, mre, cols = 2)
   dev.off()
 
-  save(mod_use, file = paste0(wham.dir,'/model.rdata'))
+  save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # WHAM output plots for best model with projections ----
   plot_wham_output(mod=mod_use,
                    res = 250,
-                   dir.main = wham.dir) # default is png
+                   dir.main = wham.dir.save) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
 
 
