@@ -252,7 +252,11 @@ build_Data<-function(scenario,
                                        sum(value*slx),
                                        rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
       ungroup() %>%
-      mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
+      mutate(year = timestep,
+             replicate = repID2,
+             fc = fractional_coverage_use,
+             scenario = scenario,
+             species = spname)
 
     results_index_gam[[paste(timestep)]] <- survey_biomass_gam
 
@@ -269,7 +273,11 @@ build_Data<-function(scenario,
         abund_cv = ifelse(abund_se/abund_mean < 0.05, 0.05, abund_se/abund_mean)
       ) %>%
       select(-term1, -term2) %>%
-      mutate(year = timestep, replicate = repID2, scenario = scenario, species = spname)
+      mutate(year = timestep,
+             replicate = repID2,
+             fc = fractional_coverage_use,
+             scenario = scenario,
+             species = spname)
 
     results_index[[paste(timestep)]] <- survey_biomass
 
@@ -303,8 +311,9 @@ build_Data<-function(scenario,
 
   results_df_age %>%
     mutate( replicate = repID2,
-           scenario = scen,
-           species = spname) %>%
+            fc = fractional_coverage_use,
+            scenario = scen,
+            species = spname) %>%
     write.csv(.,
                 paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use,
                 '-survey_obs_agecomp-numbers.csv'),
@@ -320,6 +329,7 @@ build_Data<-function(scenario,
     mutate(type = 'design-based',
            abund_mean_rescale= rescale(abund_mean, to = c(0,1)),
            replicate = repID2,
+           fc = fractional_coverage_use,
            scenario = scen,
            species = spname) %>%
 
