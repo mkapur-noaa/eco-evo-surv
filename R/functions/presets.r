@@ -64,12 +64,13 @@ scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: r
 scenLabs2 <- data.frame(cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal)))
 sppPal <- gplots::rich.colors(n = 13)
 
-survey_array <- build_survey_array(fractional_coverage = 1) ## use close to 1 so CV is not 0
+fractional_coverage_use <<- 1
+survey_array <- build_survey_array(fractional_coverage = fractional_coverage_use) ## use close to 1 so CV is not 0
 
 write.table(survey_array,
             sep = ',',
             here::here('outputs','wham_runs',paste0(Sys.Date(),'-survey_array_',
-                   round(nrow(survey_array[survey_array$year == 2010, ])/632,2),'.csv')),
+                                                    fractional_coverage_use,'.csv')),
             row.names = FALSE)
 
 # https://stackoverflow.com/questions/48297440/list-files-recursive-up-to-a-certain-level-in-r
