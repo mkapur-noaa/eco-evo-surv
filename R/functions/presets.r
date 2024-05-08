@@ -67,12 +67,10 @@ sppPal <- gplots::rich.colors(n = 13)
 ## build survey arrays at many coverage types for lookup
 ## this ensures that for a given coverage fraction, the exact same design
 ## is used for every species, scenario, and replicate
-
-sapply(x=seq(0.05,1,0.05), FUN = build_survey_array(fractional_coverage =x ))
-
-survey_array <- build_survey_array(fractional_coverage = fractional_coverage_use)
-
-
+# for(i in c(seq(0.05,1,0.05))){
+#   cat(i,"\n")
+#   build_survey_array(fractional_coverage = i)
+# }
 
 # https://stackoverflow.com/questions/48297440/list-files-recursive-up-to-a-certain-level-in-r
 list.dirs.depth.n <- function(p, n) {
