@@ -506,7 +506,7 @@ build_Data<-function(scenario,
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
     scale_y_continuous(limits = c(0, 1.2*max(results_df_index$abund_mean)), expand = c(0,0))+
     labs(x = 'Year', y = 'Biomass',
-         title = paste0('Survey Index, coverage = ', fractional_coverage_use,2))
+         title = paste0('Survey Index, coverage = ', fractional_coverage_use))
 
   ## survey age comps
   comps <- results_df_age %>%
