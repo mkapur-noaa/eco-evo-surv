@@ -155,7 +155,7 @@ build_Data<-function(scenario,
   # units_use <- ifelse(units == 'numbers','abundance','biomass') ## how the files are labeled
 
   #* survey selectivity ----
-  survey_selex <<- if(is.null(srv_selex)) {
+  survey_selex <<- if(is.na(srv_selex)) {
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
   } else {
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex))))
@@ -284,7 +284,7 @@ build_Data<-function(scenario,
     survey_biomass_gam <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
       merge(., survey_selex, by = 'age') %>%
       group_by(lat, long) %>%
-      summarise(station_abund = ifelse(is.null(obs_error),
+      summarise(station_abund = ifelse(is.na(obs_error),
                                        sum(value*slx),
                                        rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
       ungroup() %>%

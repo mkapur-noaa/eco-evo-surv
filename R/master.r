@@ -11,41 +11,28 @@ invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN
 ## Only need to do this if the simulations themselves or sampling protocol have changed
 ## (e.g., obs error, survey array, years or frequency thereof, etc)
 
-#* brute ----
-# for(scenario in 1){
-#   for(species in  c(sppLabs2$Var3[sppLabs2$Var4]+1)){
-#     for(replicate in 1:3){
-#       build_Data(scenario,
-#                  sppIdx = species,
-#                  repID = replicate,
-#                  yrs_use = 2010:2080, ## years to extract data for
-#                  srv_selex = 11, ## age at 50% selex
-#                  obs_error = 0.2, ## observation error for surveys
-#                  units = 'biomass',
-#                  units_scalar = 1,
-#                  do_GAM = FALSE)
-#     } ## end replicate
-#   } ## end species
-# } ## end scenario
 #* parallel ----
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
 foreach(scenario=1:4) %:%
-  foreach(species = 1) %:%
-  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1))%:%
-  foreach(replicate=1)  %dopar%  {
+  # foreach(species = 1) %:%
+  foreach(fc = c(1)) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
+  foreach(replicate=1:4)  %dopar%  {
+
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
-    scen_use = scenario; sp_use = species; replicate_use = replicate
+    scen_use = scenario; sp_use = species; replicate_use = replicate; fc_use = fc
 
     build_Data(scenario=scen_use,
                sppIdx = sp_use,
                repID = replicate_use,
                yrs_use = 2010:2080, ## years to extract data for
-               srv_selex = NULL, ## age at 50% selex
-               obs_error = NULL, ## observation error for surveys
+               srv_selex = ifelse(fc_use == 1, NA, 8), ## age at 50% selex
+               obs_error = ifelse(fc_use == 1, NA, 0.1), ## observation error for surveys
+               fractional_coverage_use = fc_use, ## fractional coverage of survey
                # srv_selex = 7, ## age at 50% selex
                # obs_error = 0.2, ## observation error for surveys
                units = 'biomass',
@@ -57,12 +44,12 @@ stopImplicitCluster();stopCluster()
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
+# greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-08/rep',.)] %>%
+  .[grepl('2024-05-07/rep',.)] %>%
   .[grepl('Herring',.)] #%>%
-  # .[!grepl(greppy, .)]
+# .[!grepl(greppy, .)]
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
@@ -72,17 +59,24 @@ foreach(file_use = files_to_run) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
   run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
+           fractional_coverage_use = 1, ## which survey setup to read from
            file_suffix = file_use)
 } ## end files loop
 stopImplicitCluster();stopCluster()
 
 ## Summarize results across all species, scenarios, simulations ----
 
-#* MRE by rep, scenario, species
+#* MRE by rep, scenario, species ----
+files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 4) %>%
+  .[grepl('2024-05-08/rep',.)] %>%
+  .[grepl('Herring',.)] %>%
+  .[grepl('perfect_information',.)]
+
+
 mre_all <- list.files(files_to_run,
-           pattern = 'ssb_mre.csv',
-           recursive = TRUE,
-           full.names = TRUE) %>%
+                      pattern = 'ssb_mre.csv',
+                      recursive = TRUE,
+                      full.names = TRUE) %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
   group_by(year,scenario, species) %>%
@@ -98,7 +92,7 @@ ggplot(mre_all, aes(x = year, y = med,
   geom_line() +
   geom_ribbon(aes(ymin = lwr95, ymax = upr95),
               alpha = 0.15, color = NA) +
-  # scale_y_continuous(limits = c(-100,100)) +
+  scale_y_continuous(limits = c(-100,100)) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
@@ -133,7 +127,9 @@ for(s in 1:4){
     theme_void()+
     geom_raster()+
     # scale_fill_viridis_c(na.value = NA)+
-    scale_fill_gradient2(low = "#efeee7", mid = alpha('yellow',0.2), high = scenPal[s])+
+    scale_fill_gradient2(mid = "#FFF5D1",
+                         low = "#efeee7",
+                         high = scenPal[scenario])+
     theme(
       legend.background = element_blank(),
       plot.background = element_blank(),
@@ -182,23 +178,24 @@ ggplot(tabund, aes(x = year, y = med, fill = scenario, color = scenario)) +
   facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
   labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') +
   theme(legend.position = 'top')
-  # theme_bw()
+# theme_bw()
 
 ggsave(last_plot(),
-       file =here('figs','biomass_by_scenario_50ci.png'),
+       file =here('figs','biomass_by_scenario_50ci-herring.png'),
        width = 8, height = 3, unit = 'in', dpi = 400)
 
 #* survey time series by scenario ----
 
 sobs <- list.files(files_to_run,
-           pattern = 'survey_obs_biomass.csv',
-           recursive = TRUE,
-           full.names = TRUE) %>%
+                   pattern = '-1-survey_obs_biomass.csv',
+                   recursive = TRUE,
+                   full.names = TRUE) %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
   mutate(abund_mean = abund_mean/1000) %>%
   filter(replicate == 0)
 
+sobs$scenario <- factor(sobs$scenario, levels = scenLabs2$Var2[c(2,1,3,4)])
 
 ggplot(sobs, aes(x = year,
                  y = abund_mean ,
@@ -207,19 +204,43 @@ ggplot(sobs, aes(x = year,
                  color = scenario)) +
   geom_point() +
   # geom_line()+
+  # geom_ribbon(aes(ymin = abund_mean-abund_mean*abund_cv,
+  #                   ymax =  abund_mean+abund_mean *abund_cv,
+  #                   color = scenario ),
+  #               alpha = 0.2, width = 0, color = NA) +
   geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
                     ymax =  abund_mean+abund_mean *abund_cv,
                     color = scenario ),
-              alpha = 0.2, width = 0) +
+                alpha = 0.2, width = 0) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   facet_wrap( ~ species, scales = 'free_y') +
   theme(  strip.background = element_blank(),
           strip.text.x = element_blank(),
           legend.position ='none')+
-  labs(x = 'Year', y = 'Survey Biomass (kmt)', color = '', fill = '')
+  labs(x = 'Year', y = 'Survey Biomass (kmt)', color = '', fill = '') #+
+# facet_wrap(~scenario, ncol = 1, scales = 'fixed')
 
 
 ggsave(last_plot(),
-       file =here('figs','survobs_by_scenario_95ci.png'),
-       width = 8, height = 3, unit = 'in', dpi = 400)
+       file =here('figs','survobs_by_scenario_95ci-1.0.png'),
+       width = 8/3, height = 3, unit = 'in', dpi = 400)
+
+# deprecated ----
+
+#* brute ----
+# for(scenario in 1){
+#   for(species in  c(sppLabs2$Var3[sppLabs2$Var4]+1)){
+#     for(replicate in 1:3){
+#       build_Data(scenario,
+#                  sppIdx = species,
+#                  repID = replicate,
+#                  yrs_use = 2010:2080, ## years to extract data for
+#                  srv_selex = 11, ## age at 50% selex
+#                  obs_error = 0.2, ## observation error for surveys
+#                  units = 'biomass',
+#                  units_scalar = 1,
+#                  do_GAM = FALSE)
+#     } ## end replicate
+#   } ## end species
+# } ## end scenario
