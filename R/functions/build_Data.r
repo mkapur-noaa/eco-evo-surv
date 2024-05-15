@@ -41,7 +41,7 @@ build_Data<-function(scenario,
   head.dir <- here::here('outputs','wham_runs',paste(spname,scen, sep = '-')); if(!dir.exists(head.dir)) dir.create(head.dir)
   if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
   wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
-
+  total_area <- 632 ## total number of marine cells, aka dim (all_cells)
 
   ## load parameters for this species ----
   lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
@@ -194,15 +194,8 @@ build_Data<-function(scenario,
               row.names = FALSE)
 
 
-    # define maximum age above which all entries are NA
-    max_age_survey <- abundance %>%
-      group_by(age) %>%
-      summarise(all_zero = all(value == 0)) %>%
-      filter(!all_zero) %>%
-      summarise(max_age = max(age))
-    max_age_survey <- as.numeric(max_age_survey)
 
-    total_area <- 632 ## total number of marine cells, aka dim (all_cells)
+
     biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
     biomass <- reshape2::melt(biomass0) %>%
       filter(!is.na(value) & Var3 <= max_age_pop) %>% ## drop land
@@ -259,7 +252,13 @@ build_Data<-function(scenario,
     spatial_biomass <- read.csv(paste0(wham.dir,"/",file_suffix,"-true_biomass_ys.csv")) ## collapsed to year lat long for maps
     true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix,"-true_biomass_y.csv")) ## collapsed to year lat long for maps
   } ## end if fractional_coverage_use != 1
-
+  # define maximum age above which all entries are NA
+  max_age_survey <- abundance %>%
+    group_by(age) %>%
+    summarise(all_zero = all(value == 0)) %>%
+    filter(!all_zero) %>%
+    summarise(max_age = max(age))
+  max_age_survey <- as.numeric(max_age_survey)
   #* run survey ----
   # Initialize an empty list to store the results
   results_age <- results_index <- results_index_gam <- list()

@@ -16,11 +16,11 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
-foreach(scenario=1:4) %:%
-  # foreach(species = 1) %:%
+foreach(scenario=1) %:%
+  foreach(species = 1) %:%
   foreach(fc = c(1)) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
-  foreach(replicate=1:4)  %dopar%  {
+  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
+  foreach(replicate=1)  %dopar%  {
 
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
