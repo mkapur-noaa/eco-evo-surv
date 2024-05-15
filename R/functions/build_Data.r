@@ -281,20 +281,20 @@ build_Data<-function(scenario,
 
     ## survey indices
     # MODEL_BASED: generate the spatialized survey data; pass to GAM once all years ready
-    survey_biomass_gam <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
-      merge(., survey_selex, by = 'age') %>%
-      group_by(lat, long) %>%
-      summarise(station_abund = ifelse(is.null(obs_error),
-                                       sum(value*slx),
-                                       rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
-      ungroup() %>%
-      mutate(year = timestep,
-             replicate = repID2,
-             fc = fractional_coverage_use,
-             scenario = scenario,
-             species = spname)
-
-    results_index_gam[[paste(timestep)]] <- survey_biomass_gam
+    # survey_biomass_gam <- semi_join(timestep_data_biom, selected_cells, by = c("lat", "long")) %>%
+    #   merge(., survey_selex, by = 'age') %>%
+    #   group_by(lat, long) %>%
+    #   summarise(station_abund = ifelse(is.null(obs_error),
+    #                                    sum(value*slx),
+    #                                    rnorm(1,sum(value*slx),obs_error*mean(value)))) %>% ## sum over all ages
+    #   ungroup() %>%
+    #   mutate(year = timestep,
+    #          replicate = repID2,
+    #          fc = fractional_coverage_use,
+    #          scenario = scenario,
+    #          species = spname)
+    #
+    # results_index_gam[[paste(timestep)]] <- survey_biomass_gam
 
     # DESIGN-BASED: expand the mean and sd of the abundance for the selected cells
     survey_biomass <- survey_biomass_gam %>%
@@ -503,9 +503,7 @@ build_Data<-function(scenario,
            width = 6, height = 6, unit = 'in', dpi = 400)
   } ## end if fractional_coverage_use == 1
   #* Survey figures ----
-  ## maps of true biomass thru time
-
-
+  #** maps of true biomass thru time----
   map <-  spatial_biomass %>%
     filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
     ggplot(data = ., aes(x = lat, y = long,
@@ -524,8 +522,7 @@ build_Data<-function(scenario,
           legend.position = 'none')+
     facet_wrap(~year, ncol = 2)
 
-  ## survey index data
-
+  #** survey index data----
   true_b <- ggplot(true_biomass, aes(x = year, y =abund_mean_rescale)) +
     geom_line(color = scenLabs2[scenario,'Pal'])+
     scale_x_continuous(breaks = seq(min(yrs_use), max(yrs_use), by = 10))+
@@ -546,7 +543,7 @@ build_Data<-function(scenario,
     labs(x = 'Year', y = 'Biomass',
          title = paste0('Survey Index, coverage = ', fractional_coverage_use))
 
-  ## survey age comps
+  #** survey age comps----
   comps <- results_df_age %>%
     mutate( scount = sum(count), .by = c(year)) %>%
     mutate(frequency = count/scount)  %>%
