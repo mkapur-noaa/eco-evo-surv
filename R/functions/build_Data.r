@@ -42,6 +42,7 @@ build_Data<-function(scenario,
   if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
   wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
 
+
   ## load parameters for this species ----
   lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
   max_age_pop <- read.csv(here::here('outputs','wham_runs','max_age.csv')) %>%  filter(species == spname)
@@ -53,15 +54,19 @@ build_Data<-function(scenario,
     laa[a,'age'] <- a
     laa[a,'length_cm'] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
   }
-  write.table(laa,
-              sep = ' ',
-              paste0(wham.dir,"/",file_suffix,'-laa.csv'),
-              row.names = FALSE)
+
+  if(fractional_coverage_use==1){
+    write.table(laa,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-laa.csv'),
+                row.names = FALSE)
+  }
 
   max_age_pop <- as.numeric(max_age_pop$value)
 
   #* unfished NAA (for N1_ini) ----
   ## ballpark from earlier runs
+  if(fractional_coverage_use==1){
   age_spatial_nofish_path <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/one_sim_without_fishing",
                                     "/ns_spatial_abundancebyAge-",spname,"_Simu0.nc")
   abundance_nofish <- ncvar_get(nc_open(age_spatial_nofish_path),"abundance") ## this might need to switch with units_use
@@ -80,6 +85,7 @@ build_Data<-function(scenario,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),
                 row.names = FALSE)
+  }
 
 
 
@@ -104,7 +110,7 @@ build_Data<-function(scenario,
   ## mortality (year x age) ----
 
   ## don't have age-specific values so keep same
-
+  if(fractional_coverage_use==1){
   mort_path <- paste0(dirtmp, '/mortality/', 'ns_mortalityRate-',spname,"_Simu",repID2,".csv")
   mort_csv <- read.csv(mort_path, skip = 3, header = F)[,c(1,12,18)] %>% ## timestep, Frecruits, Mrecruits
     mutate(year = floor(as.numeric(stringr::str_split_fixed(V1, "\\.", 1)) -70+2010)) %>%
@@ -123,9 +129,9 @@ build_Data<-function(scenario,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_mortality.csv'),
                 row.names = FALSE)
-
-  #   ## maturity (year x age) ----
-
+  }
+   ## maturity (year x age) ----
+  if(fractional_coverage_use==1){
   mat_path <- paste0(dirtmp, '/ageIndicators/', 'ns_maturityDistribByAge',"_Simu",repID2,".csv")
   maturity_data <- read.csv(mat_path, skip = 1, header = T) %>%
     reshape2::melt(id = c('Time','Age')) %>%
@@ -142,7 +148,7 @@ build_Data<-function(scenario,
               sep = ' ',
               paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
               row.names = FALSE)
-
+}
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
   ## need numbers ('abundance') for ages, biomass for indices
@@ -156,6 +162,7 @@ build_Data<-function(scenario,
   }
 
   #* filepaths for abundance, biomass ----
+  if(fractional_coverage_use==1){
   age_spatial_path <- list.files(dirtmp,
                                  pattern = paste0('spatial_abundancebyAge-',spname),
                                  recursive = T,
@@ -165,7 +172,7 @@ build_Data<-function(scenario,
                                   recursive = T,
                                   full.names = TRUE)[repID]
 
-  repID2 <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
+  # repID2 <-  as.numeric(stringr::str_extract(age_spatial_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
   abundance0 <- ncvar_get(nc_open(age_spatial_path),"abundance") ## this might need to switch with units_use
   # this is age (26) lat (25) lon (52) timestep (24/year 2010-2099)
