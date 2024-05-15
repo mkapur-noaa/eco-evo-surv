@@ -367,8 +367,6 @@ build_Data<-function(scenario,
            fc = fractional_coverage_use,
            scenario = scen,
            species = spname) %>%
-
-
     write.csv(.,
               paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use,
                      '-survey_obs_biomass.csv'),
@@ -575,8 +573,9 @@ build_Data<-function(scenario,
   dev.off()
 
 
-  cat('Built data and summary figures for',paste0(spname,
-                                                  ' ',scen,' replicate ',
-                                                  repID2),"\n")
+  cat('Built data and summary figures for',
+      paste0(spname,
+             ' ',scen,' replicate ',
+             repID2),"\n")
 
 }
