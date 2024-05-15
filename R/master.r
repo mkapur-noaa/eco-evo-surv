@@ -15,10 +15,10 @@ invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
-## for one species-replicate combo, four scenarios takes about 20 seconds
-foreach(scenario=1) %:%
-  foreach(species = 1) %:%
-  foreach(fc = c(0.15)) %:%
+## one species, one replicate, one scenario, full fc =
+
+foreach(scenario=3) %:%
+  foreach(species = 4) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
   foreach(replicate=1)  %dopar%  {
 
@@ -27,20 +27,22 @@ foreach(scenario=1) %:%
     scen_use = scenario;
     sp_use = species;
     replicate_use = replicate;
-    fc_use = fc
 
-    build_Data(scenario=scen_use,
-               sppIdx = sp_use,
-               repID = replicate_use,
-               yrs_use = 2010:2080, ## years to extract data for
-               # srv_selex = ifelse(fc_use == 1, NA, 8), ## age at 50% selex
-               # obs_error = ifelse(fc_use == 1, NA, 0.1), ## observation error for surveys
-               fractional_coverage_use = fc_use, ## fractional coverage of survey
-               srv_selex = NA, ## age at 50% selex
-               obs_error = NA, ## observation error for surveys
-               units = 'biomass',
-               units_scalar = 1,
-               do_GAM = FALSE)
+    for(fc_use in c(1,0.15)){
+      build_Data(scenario=scen_use,
+                 sppIdx = sp_use,
+                 repID = replicate_use,
+                 yrs_use = 2010:2080, ## years to extract data for
+                 # srv_selex = ifelse(fc_use == 1, NA, 8), ## age at 50% selex
+                 # obs_error = ifelse(fc_use == 1, NA, 0.1), ## observation error for surveys
+                 fractional_coverage_use = fc_use, ## fractional coverage of survey
+                 srv_selex = NA, ## age at 50% selex
+                 obs_error = NA, ## observation error for surveys
+                 units = 'biomass',
+                 units_scalar = 1,
+                 do_GAM = FALSE)
+    } ## end fractional coverage loop
+
   } ## end nested loop
 # When you're done, clean up the cluster
 stopImplicitCluster();stopCluster()
