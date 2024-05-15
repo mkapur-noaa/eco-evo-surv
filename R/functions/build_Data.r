@@ -216,7 +216,19 @@ build_Data<-function(scenario,
       select(-month)
 
     write.csv(biomass,
-              paste0(wham.dir,"/",file_suffix,"-spatial_biomass.csv"),
+              paste0(wham.dir,"/",file_suffix,"-true_biomass_ysa.csv"),
+              row.names = FALSE)
+
+    spatial_biomass <- biomass %>%
+      summarise(tot_val = sum(value),   .by = c(year, lat, long)) %>%
+      # summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),  .by = c(year))
+      mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
+             replicate = repID2,
+             scenario = scen,
+             species = spname)
+
+    write.csv(spatial_biomass,
+              paste0(wham.dir,"/",file_suffix,"-true_biomass_ys.csv"),
               row.names = FALSE)
 
     #* true biomass, SSB, no space ----
@@ -239,12 +251,13 @@ build_Data<-function(scenario,
              species = spname)
 
     write.csv(true_biomass,
-              paste0(wham.dir,"/",file_suffix,"-true_biomass.csv"),
+              paste0(wham.dir,"/",file_suffix,"-true_biomass_y.csv"),
               row.names = FALSE)
   } else{
     abundance <- read.csv(paste0(wham.dir,"/",file_suffix,"-abundance.csv"))
-    biomass <- read.csv(paste0(wham.dir,"/",file_suffix,"-spatial_biomass.csv"))
-
+    biomass <- read.csv(paste0(wham.dir,"/",file_suffix,"-true_biomass_ysa.csv")) ## annual bio
+    spatial_biomass <- read.csv(paste0(wham.dir,"/",file_suffix,"-true_biomass_ys.csv")) ## collapsed to year lat long for maps
+    true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix,"-true_biomass_y.csv")) ## collapsed to year lat long for maps
   } ## end if fractional_coverage_use != 1
 
   #* run survey ----
@@ -392,117 +405,106 @@ build_Data<-function(scenario,
 
   ## Yield data ----
   ## strip and format catches (want yr x Age with totals on end outputs are spp x Age x timestep)
-  yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
-  yield_path <-   list.files(dirtmp,
-                             pattern = paste0('ns_yieldDistribByAge*'),
-                             recursive = T,
-                             full.names = TRUE)[repID]
+  if(fractional_coverage_use==1){
+    yield_files <- list.files(dirtmp, pattern = 'yieldDistribByAge*', recursive = T, full.names = TRUE)
+    yield_path <-   list.files(dirtmp,
+                               pattern = paste0('ns_yieldDistribByAge*'),
+                               recursive = T,
+                               full.names = TRUE)[repID]
 
-  repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
+    repID2 <-  as.numeric(stringr::str_extract(yield_path, "(?<=Simu)\\d+(?=\\.nc)")) ## might not match replicate input
 
-  yield0 <- ncvar_get(nc_open(yield_path),"biomass")
+    yield0 <- ncvar_get(nc_open(yield_path),"biomass")
 
-  yield1 <- reshape2::melt(yield0) %>%
-    mutate(year = 2010 + (Var3 - 1) %/% 24,
-           month = ((Var3 - 1) %% 24) %/% 2 + 1,
-           age = ifelse(Var2 >= max_age_pop,max_age_pop,Var2)) %>%
-    filter(Var1 == sppIdx) %>%
-    select(year, age, value) %>%
-    group_by(year,age) %>%
-    summarise(value = sum(value)) %>%
-    ungroup()
+    yield1 <- reshape2::melt(yield0) %>%
+      mutate(year = 2010 + (Var3 - 1) %/% 24,
+             month = ((Var3 - 1) %% 24) %/% 2 + 1,
+             age = ifelse(Var2 >= max_age_pop,max_age_pop,Var2)) %>%
+      filter(Var1 == sppIdx) %>%
+      select(year, age, value) %>%
+      group_by(year,age) %>%
+      summarise(value = sum(value)) %>%
+      ungroup()
 
-  # define maximum age above which all entries are NA or zero
-  # max_age_catch <- yield1 %>%
-  #   group_by(age) %>%
-  #   summarise(all_zero = all(value == 0)) %>%
-  #   filter(!all_zero) %>%
-  #   summarise(max_age = max(age))
-  # max_age_catch <- ifelse(as.numeric(max_age_catch)>max_age_pop,max_age_pop,as.numeric(max_age_catch))
+    # define maximum age above which all entries are NA or zero
+    # max_age_catch <- yield1 %>%
+    #   group_by(age) %>%
+    #   summarise(all_zero = all(value == 0)) %>%
+    #   filter(!all_zero) %>%
+    #   summarise(max_age = max(age))
+    # max_age_catch <- ifelse(as.numeric(max_age_catch)>max_age_pop,max_age_pop,as.numeric(max_age_catch))
 
-  yield1 %>%
-    filter(age <= max_age_pop) %>%
-    ## truncate age-zeros and max ages
-    mutate(value = case_when(age == 1 ~ 0,
-                             # age >= max_age_catch  ~ -999,
-                             age <= max_age_pop ~ round(value))) %>%
-    tidyr::pivot_wider(names_from = age, values_from = value) %>%
-    select(-year) %>%
-    mutate(total = rowSums(.)+999) %>%
-    # save the results
-    write.table(.,
+    yield1 %>%
+      filter(age <= max_age_pop) %>%
+      ## truncate age-zeros and max ages
+      mutate(value = case_when(age == 1 ~ 0,
+                               # age >= max_age_catch  ~ -999,
+                               age <= max_age_pop ~ round(value))) %>%
+      tidyr::pivot_wider(names_from = age, values_from = value) %>%
+      select(-year) %>%
+      mutate(total = rowSums(.)+999) %>%
+      # save the results
+      write.table(.,
+                  sep = ' ',
+                  paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),
+                  row.names = FALSE)
+
+    ## WAA matrices ----
+    #*   population WAA ----
+    ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
+    waa <- read.csv(header = T, skip = 1,
+                    list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
+                               recursive = T, full.names = TRUE)[repID]) %>%
+      reshape2::melt(id = c('Time','Age')) %>%
+      filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+      mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
+      group_by(year,Age) %>%
+      summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
+      ungroup() %>%
+      mutate(mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
+      mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
+      select(-mean_size_cm)  %>%
+      tidyr::complete(year = 2010:2099, Age = 1:max_age_pop) %>%
+      group_by(year) %>%
+      tidyr::fill(mean_weight_kg , .direction = "down")  %>%
+      ungroup() %>%
+      tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
+      select(-year)
+
+    write.table(waa,
                 sep = ' ',
-                paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),
+                paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),
                 row.names = FALSE)
 
-  ## WAA matrices ----
 
+    #*   catch WAA ----
+    #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
+    #*   and therefore can't infer WAA in the catch explicitly.
+    #*   Only have biomass-at-age, total numbers, and mean size.
+    #*   Avoid using population NAA and monkeying with selex.
+    #*   FOR NOW, assume that the catch WAA matches the population
+    write.table(waa,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
+                row.names = FALSE)
 
-  #*   population WAA ----
-  ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
-  waa <- read.csv(header = T, skip = 1,
-                  list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
-                             recursive = T, full.names = TRUE)[repID]) %>%
-    reshape2::melt(id = c('Time','Age')) %>%
-    filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
-    mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
-    group_by(year,Age) %>%
-    summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
-    ungroup() %>%
-    mutate(mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
-    mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
-    select(-mean_size_cm)  %>%
-    tidyr::complete(year = 2010:2099, Age = 1:max_age_pop) %>%
-    group_by(year) %>%
-    tidyr::fill(mean_weight_kg , .direction = "down")  %>%
-    ungroup() %>%
-    tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
-    select(-year)
+    ## Summary figures and data ----
+    #* Catch Figures ----
 
-  write.table(waa,
-              sep = ' ',
-              paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),
-              row.names = FALSE)
-
-
-  #*   catch WAA ----
-  #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
-  #*   and therefore can't infer WAA in the catch explicitly.
-  #*   Only have biomass-at-age, total numbers, and mean size.
-  #*   Avoid using population NAA and monkeying with selex.
-  #*   FOR NOW, assume that the catch WAA matches the population
-  write.table(waa,
-              sep = ' ',
-              paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
-              row.names = FALSE)
-
-  ## Summary figures and data ----
-  #* Catch Figures ----
-
-  ggplot(yield1, aes(x = year, y = value, fill = as.factor(age))) +
-    theme(legend.position = 'none')+
-    geom_area(alpha =0.4, color = scenLabs2[scenario,'Pal'])+
-    labs(x = 'Year', y = 'Yield (kg)', color = 'Year') +
-    scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
-                                                              modification = "go_lighter",
-                                                              n_colours = length(unique(yield1$age)),
-                                                              view_palette = FALSE))
-  ggsave(last_plot(), file = paste0(wham.dir,"/",file_suffix,"-catch_at_age.png"),
-         width = 6, height = 6, unit = 'in', dpi = 400)
-
+    ggplot(yield1, aes(x = year, y = value, fill = as.factor(age))) +
+      theme(legend.position = 'none')+
+      geom_area(alpha =0.4, color = scenLabs2[scenario,'Pal'])+
+      labs(x = 'Year', y = 'Yield (kg)', color = 'Year') +
+      scale_fill_manual(values =  monochromeR::generate_palette(scenLabs2[scenario,'Pal'],
+                                                                modification = "go_lighter",
+                                                                n_colours = length(unique(yield1$age)),
+                                                                view_palette = FALSE))
+    ggsave(last_plot(), file = paste0(wham.dir,"/",file_suffix,"-catch_at_age.png"),
+           width = 6, height = 6, unit = 'in', dpi = 400)
+  } ## end if fractional_coverage_use == 1
   #* Survey figures ----
   ## maps of true biomass thru time
-  spatial_biomass <- biomass %>%
-    summarise(tot_val = sum(value),   .by = c(year, lat, long)) %>%
-    # summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),  .by = c(year))
-    mutate(abundance_rescale =  rescale(tot_val, to=c(0,1), na.rm = T),
-           replicate = repID2,
-           scenario = scen,
-           species = spname)
 
-  write.csv(spatial_biomass,
-            paste0(wham.dir,"/",file_suffix,"-true_biomass_spatial.csv"),
-            row.names = FALSE)
 
   map <-  spatial_biomass %>%
     filter(year %in% floor(seq(2020,max(biomass$year),length.out = 4)))  %>%
