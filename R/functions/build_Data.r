@@ -25,7 +25,6 @@ build_Data<-function(scenario,
                      do_GAM = FALSE) ## whether or not to invoke spatial standardization
 {
 
-  survey_array <- read.csv(here::here('outputs','wham_runs',paste0('2024-05-08-survey_array_',fractional_coverage_use,'.csv')))
 
   ## string designators
   scen <- scenLabs2[scenario,2]
@@ -230,6 +229,7 @@ build_Data<-function(scenario,
   #* run survey ----
   # Initialize an empty list to store the results
   results_age <- results_index <- results_index_gam <- list()
+  survey_array <- read.csv(here::here('outputs','wham_runs',paste0('2024-05-08-survey_array_',fractional_coverage_use,'.csv')))
 
   # For each timestep
   for (timestep in unique(abundance$year)) {
