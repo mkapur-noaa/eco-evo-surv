@@ -70,7 +70,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
   asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
   asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
-  asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
+  asap3$dat$catch_cv <- matrix(0.05,asap3$dat$n_years )
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
 
   #* selex ----
@@ -146,12 +146,12 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # check_convergence(m4)
 
   # Save list of all fit models
-  mods <- list(m1=m1, m2=m2)
+  # mods <- list(m1=m1, m2=m2)
   # save("mods", file=  paste0(wham.dir,"/",file_suffix2,"-all_models.Rdata")
 
   # Compare models by AIC and Mohn's rho
-  res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
-  res$best
+  # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
+  # res$best
 
   mod_use <- m2
 
@@ -206,12 +206,15 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
     labs(x = 'Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
-  write.csv(mre_table,paste0(wham.dir,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
+  write.csv(mre_table,paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
 
   png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
       height = 5, width = 12, unit = 'in',res = 520)
   Rmisc::multiplot(ssb_compare, mre, cols = 2)
   dev.off()
+
+  ggsave(ssb_compare, file = paste0(wham.dir,"/",file_suffix,"-ssb_compare.png"),
+         width = 6, height = 6, unit = 'in', dpi = 400)
 
   save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # WHAM output plots for best model with projections ----
