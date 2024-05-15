@@ -18,23 +18,26 @@ registerDoParallel(cl)
 ## for one species-replicate combo, four scenarios takes about 20 seconds
 foreach(scenario=1) %:%
   foreach(species = 1) %:%
-  foreach(fc = c(1)) %:%
+  foreach(fc = c(0.15)) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
   foreach(replicate=1)  %dopar%  {
 
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
-    scen_use = scenario; sp_use = species; replicate_use = replicate; fc_use = fc
+    scen_use = scenario;
+    sp_use = species;
+    replicate_use = replicate;
+    fc_use = fc
 
     build_Data(scenario=scen_use,
                sppIdx = sp_use,
                repID = replicate_use,
                yrs_use = 2010:2080, ## years to extract data for
-               srv_selex = ifelse(fc_use == 1, NA, 8), ## age at 50% selex
-               obs_error = ifelse(fc_use == 1, NA, 0.1), ## observation error for surveys
+               # srv_selex = ifelse(fc_use == 1, NA, 8), ## age at 50% selex
+               # obs_error = ifelse(fc_use == 1, NA, 0.1), ## observation error for surveys
                fractional_coverage_use = fc_use, ## fractional coverage of survey
-               # srv_selex = 7, ## age at 50% selex
-               # obs_error = 0.2, ## observation error for surveys
+               srv_selex = NA, ## age at 50% selex
+               obs_error = NA, ## observation error for surveys
                units = 'biomass',
                units_scalar = 1,
                do_GAM = FALSE)
