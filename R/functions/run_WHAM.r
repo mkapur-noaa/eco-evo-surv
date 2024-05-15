@@ -29,7 +29,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
   waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
   N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
-  true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass.csv'))
+  true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_y.csv'))
 
   ## load asap3-style data file ----
   # copy templated asap3 data file to working directory
@@ -99,14 +99,10 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                model_name=file_suffix2,
                                selectivity=list(model=c('double-logistic','age-specific'),
                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(c(7,0.9,7,0.9), ## fully selected fishery
+                                                initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
                                                                   rep(1, asap3$dat$n_ages)), ## fully selected survey
                                                 fix_pars=list(NULL,
                                                               c(1:asap3$dat$n_ages))), ## fix 'em all
-                               # selectivity=list(model=c('logistic','logistic'),
-                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-                               #                                    c(7,0.9))), ## alpha, b1, survey
                                NAA_re = list(sigma="rec", cor="iid"))
   m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
   check_convergence(m2)
