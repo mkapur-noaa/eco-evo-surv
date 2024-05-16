@@ -74,7 +74,7 @@ build_Data<-function(scenario,
       filter(!is.na(value)) %>% ## drop land
       mutate(year = 2010 + (Var4 - 1) %/% 24,
              month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
-      select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+      dplyr::select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
       filter(year == 2010) %>% ## assume equilibrium
       group_by(age) %>%
       summarise(value = mean(value)) %>% ## average
@@ -143,7 +143,7 @@ build_Data<-function(scenario,
       tidyr::complete(year = 2010:2099, Age = 1:max_age_pop,
                       fill = list(value = 1)) %>%
       tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
-      select(-year)
+      dplyr::select(-year)
     write.table(maturity_data,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
@@ -182,12 +182,12 @@ build_Data<-function(scenario,
       filter(!is.na(value) & Var3 <= max_age_pop) %>% ## drop land
       mutate(year = 2010 + (Var4 - 1) %/% 24,
              month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
-      select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+      dplyr::select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
       filter(month == 7 & year %in% yrs_use) %>% ## July survey
       group_by(year, age, lat, long, month) %>%
       summarise(value = mean(value)) %>% ## average over the month
       ungroup() %>%
-      select(-month)
+      dplyr::select(-month)
 
     write.csv(abundance,
               paste0(wham.dir,"/",file_suffix,"-abundance.csv"),
@@ -201,12 +201,12 @@ build_Data<-function(scenario,
       filter(!is.na(value) & Var3 <= max_age_pop) %>% ## drop land
       mutate(year = 2010 + (Var4 - 1) %/% 24,
              month = ((Var4 - 1) %% 24) %/% 2 + 1) %>%
-      select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
+      dplyr::select(lat=Var1, long=Var2, age=Var3, year, value, month) %>%
       filter(month == 7 & year %in% yrs_use) %>% ## July survey
       group_by(year, age, lat, long, month) %>%
       summarise(value = mean(value)) %>% ## average over the month
       ungroup() %>%
-      select(-month)
+      dplyr::select(-month)
 
     write.csv(biomass,
               paste0(wham.dir,"/",file_suffix,"-true_biomass_ysa.csv"),
@@ -307,7 +307,7 @@ build_Data<-function(scenario,
         #abund_cv = abund_sd/abund_mean  ## Oyafuso method
         abund_cv = ifelse(abund_se/abund_mean < 0.025, 0.025, abund_se/abund_mean)
       ) %>%
-      select(-term1, -term2) %>%
+      dplyr::select(-term1, -term2) %>%
       mutate(year = timestep,
              replicate = repID2,
              fc = fractional_coverage_use,
@@ -341,7 +341,7 @@ build_Data<-function(scenario,
   results_df_age <- results_df_age_spatial %>%
     group_by(timestep, age) %>%
     summarise(count = sum(count)) %>%
-    select(year = timestep, age, count) %>%
+    dplyr::select(year = timestep, age, count) %>%
     ungroup()
 
   results_df_age %>%
@@ -378,7 +378,7 @@ build_Data<-function(scenario,
   survey_results <- results_df_index %>%
     mutate(abund_mean = round(abund_mean/units_scalar),
            abund_cv = round(abund_cv,3)) %>%
-    select(year, abund_mean, abund_cv) %>%
+    dplyr::select(year, abund_mean, abund_cv) %>%
     tidyr::complete(year = 2010:2099,
                     fill = list(abund_mean = -999,
                                 abund_sd  = -999,
@@ -418,7 +418,7 @@ build_Data<-function(scenario,
              month = ((Var3 - 1) %% 24) %/% 2 + 1,
              age = ifelse(Var2 >= max_age_pop,max_age_pop,Var2)) %>%
       filter(Var1 == sppIdx) %>%
-      select(year, age, value) %>%
+      dplyr::select(year, age, value) %>%
       group_by(year,age) %>%
       summarise(value = sum(value)) %>%
       ungroup()
@@ -438,7 +438,7 @@ build_Data<-function(scenario,
                                # age >= max_age_catch  ~ -999,
                                age <= max_age_pop ~ round(value))) %>%
       tidyr::pivot_wider(names_from = age, values_from = value) %>%
-      select(-year) %>%
+      dplyr::select(-year) %>%
       mutate(total = rowSums(.)+999) %>%
       # save the results
       write.table(.,
@@ -460,13 +460,13 @@ build_Data<-function(scenario,
       ungroup() %>%
       mutate(mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
       mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
-      select(-mean_size_cm)  %>%
+      dplyr::select(-mean_size_cm)  %>%
       tidyr::complete(year = 2010:2099, Age = 1:max_age_pop) %>%
       group_by(year) %>%
       tidyr::fill(mean_weight_kg , .direction = "down")  %>%
       ungroup() %>%
       tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
-      select(-year)
+      dplyr::select(-year)
 
     write.table(waa,
                 sep = ' ',
