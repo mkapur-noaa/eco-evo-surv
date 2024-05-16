@@ -305,7 +305,7 @@ build_Data<-function(scenario,
         abund_se = term1*term2, ## Spencer method with finite pop correction term
         abund_sd = sqrt(var(station_abund, na.rm = T)*total_area^2 / nrow(selected_cells)), ## Oyafuso method
         #abund_cv = abund_sd/abund_mean  ## Oyafuso method
-        abund_cv = ifelse(abund_se/abund_mean < 0.05, 0.05, abund_se/abund_mean)
+        abund_cv = ifelse(abund_se/abund_mean < 0.025, 0.025, abund_se/abund_mean)
       ) %>%
       select(-term1, -term2) %>%
       mutate(year = timestep,
