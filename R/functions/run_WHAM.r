@@ -150,7 +150,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   # res$best
 
   mod_use <- m2
-
+  save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
@@ -159,6 +159,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   if(mod_use$is_sdrep){
     std <- summary(mod_use$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
+    F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = exp(std[ssb.ind, 1]) ,
              ssb_est_cv = std[ssb.ind, 2],
@@ -180,7 +181,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
 
   ssb_compare <-  mre_table %>%
-    select(year, ssb_true, ssb_est, lower, upper) %>%
+    dplyr::select(year, ssb_true, ssb_est, lower, upper) %>%
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
     geom_line() +
@@ -191,9 +192,12 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
                                   'grey22'),
                        labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
     labs(x = 'Year', y = 'SSB (kmt)') +
-    theme(legend.position.inside = c(0.8,0.8)) +
+    theme(legend.position='top') +
     labs(color = '') +
-    scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
+    {if(spname == 'AtlanticHerring') scale_y_continuous(limits = c(500,3000))}
+    # {if(spname == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
+    # {if(spname == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))}
+    # scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
 
   mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
@@ -204,15 +208,16 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
 
   write.csv(mre_table,paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
 
-  png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
-      height = 5, width = 12, unit = 'in',res = 520)
-  Rmisc::multiplot(ssb_compare, mre, cols = 2)
-  dev.off()
+  # png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
+  #     height = 5, width = 12, unit = 'in',res = 520)
+  # Rmisc::multiplot(ssb_compare, mre, cols = 2)
+  # dev.off()
+  ggsave(mre, file = paste0(wham.dir.save,"/",file_suffix2,"-mre.png"),
+         width = 4, height = 4, unit = 'in', dpi = 400)
+  ggsave(ssb_compare, file = paste0(wham.dir.save,"/",file_suffix2,"-ssb_compare.png"),
+         width = 4, height = 4, unit = 'in', dpi = 400)
 
-  ggsave(ssb_compare, file = paste0(wham.dir,"/",file_suffix,"-ssb_compare.png"),
-         width = 6, height = 6, unit = 'in', dpi = 400)
 
-  save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # WHAM output plots for best model with projections ----
   plot_wham_output(mod=mod_use,
                    res = 250,
