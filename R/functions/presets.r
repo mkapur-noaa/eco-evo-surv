@@ -23,6 +23,7 @@ library(gratia)
 # remotes::install_github("cararthompson/monochromeR"
 library(monochromeR)
 library(RColorBrewer)
+library(dismo)
 
 theme_set(ggsidekick::theme_sleek()+
             theme(
