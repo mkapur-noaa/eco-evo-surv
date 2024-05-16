@@ -15,12 +15,12 @@ invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
-## one species, one replicate, one scenario, full fc =
-
-foreach(scenario=3) %:%
-  foreach(species = 4) %:%
-  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
-  foreach(replicate=1)  %dopar%  {
+## one species, one replicate, one scenario, two fc scenarios = 2 mins
+## three spp, one replicate, four scenarios  = 4 mins
+foreach(scenario=1:4) %:%
+  # foreach(species = c(1,9)) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
+  foreach(replicate=6:8)  %dopar%  {
 
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
@@ -52,8 +52,9 @@ stopImplicitCluster();stopCluster()
 # greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-07/rep',.)] %>%
+  .[grepl('2024-05-15/rep',.)] %>%
   .[grepl('Herring',.)] #%>%
+
 # .[!grepl(greppy, .)]
 
 cores <- detectCores() - 2
@@ -158,78 +159,89 @@ ggsave(Rmisc::multiplot(plotlist = maplist, cols = 1),
        width = 3, height = 10, unit = 'in', dpi = 400)
 
 #* biomass timeseries by scenarios ----
-tabund <- list.files(files_to_run,
-                     pattern ="*true_biomass\\b.csv",
-                     recursive = TRUE,
-                     full.names = TRUE) %>%
-  # .[grepl('2024-05-06',.)] %>%
-  lapply(., FUN = read.csv) %>%
-  bind_rows() %>%
-  group_by(year,scenario, species) %>%
-  summarize(med=median(ssb_true )/1000,
-            lwr50=quantile(ssb_true , .25)/1000,
-            upr50=quantile(ssb_true , .75)/1000,
-            lwr95=quantile(ssb_true , .0275)/1000,
-            upr95=quantile(ssb_true , .975)/1000)
+for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
+  tabund <- list.files(files_to_run,
+                       pattern ="*true_biomass_y\\b.csv",
+                       recursive = TRUE,
+                       full.names = TRUE) %>%
+    .[grepl(species,.)] %>%
+    lapply(., FUN = read.csv) %>%
+    bind_rows() %>%
+    group_by(year,scenario, species) %>%
+    summarize(med=median(ssb_true )/1000,
+              lwr50=quantile(ssb_true , .25)/1000,
+              upr50=quantile(ssb_true , .75)/1000,
+              lwr95=quantile(ssb_true , .0275)/1000,
+              upr95=quantile(ssb_true , .975)/1000)
 
 
 
-ggplot(tabund, aes(x = year, y = med, fill = scenario, color = scenario)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = lwr50, ymax = upr50),
-              alpha = 0.2, color = NA) +
-  scale_fill_manual(values = scenPal, labels = scenLabs)+
-  scale_color_manual(values = scenPal, labels = scenLabs)+
-  facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
-  labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') +
-  theme(legend.position = 'top')
-# theme_bw()
+  ggplot(tabund, aes(x = year, y = med, fill = scenario, color = scenario)) +
+    geom_line() +
+    geom_ribbon(aes(ymin = lwr50, ymax = upr50),
+                alpha = 0.2, color = NA) +
+    scale_fill_manual(values = scenPal, labels = scenLabs)+
+    scale_color_manual(values = scenPal, labels = scenLabs)+
+    # facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
+    labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') #+
+    # theme(legend.position = 'top')
+  # theme_bw()
 
-ggsave(last_plot(),
-       file =here('figs','biomass_by_scenario_50ci-herring.png'),
-       width = 8, height = 3, unit = 'in', dpi = 400)
+  ggsave(last_plot(),
+         file =here('figs',paste0('biomass_by_scenario_50ci-',species,'.png')),
+         width = 4, height = 3, unit = 'in', dpi = 400)
+} ## end species
 
 #* survey time series by scenario ----
+for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
+  for(fc in c(1,0.15)){
 
-sobs <- list.files(files_to_run,
-                   pattern = '-1-survey_obs_biomass.csv',
-                   recursive = TRUE,
-                   full.names = TRUE) %>%
-  lapply(., FUN = read.csv) %>%
-  bind_rows() %>%
-  mutate(abund_mean = abund_mean/1000) %>%
-  filter(replicate == 0)
+    ## strip one species and coverage-specific replicate
+    sobs <- list.files(files_to_run,
+                       pattern = paste0(fc,'-survey_obs_biomass.csv'),
+                       recursive = TRUE,
+                       full.names = TRUE) %>%
+      .[grepl(species,.)] %>%
+      lapply(., FUN = read.csv) %>%
+      bind_rows() %>%
+      mutate(abund_mean = abund_mean/1000) %>%
+      filter(replicate == 0)
 
-sobs$scenario <- factor(sobs$scenario, levels = scenLabs2$Var2[c(2,1,3,4)])
+    # sobs$scenario <- factor(sobs$scenario, levels = scenLabs2$Var2[c(2,1,3,4)])
 
-ggplot(sobs, aes(x = year,
-                 y = abund_mean ,
-                 group= interaction(replicate, scenario),
-                 fill = scenario,
-                 color = scenario)) +
-  geom_point() +
-  # geom_line()+
-  # geom_ribbon(aes(ymin = abund_mean-abund_mean*abund_cv,
-  #                   ymax =  abund_mean+abund_mean *abund_cv,
-  #                   color = scenario ),
-  #               alpha = 0.2, width = 0, color = NA) +
-  geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
-                    ymax =  abund_mean+abund_mean *abund_cv,
-                    color = scenario ),
-                alpha = 0.2, width = 0) +
-  scale_fill_manual(values = scenPal, labels = scenLabs)+
-  scale_color_manual(values = scenPal, labels = scenLabs)+
-  facet_wrap( ~ species, scales = 'free_y') +
-  theme(  strip.background = element_blank(),
-          strip.text.x = element_blank(),
-          legend.position ='none')+
-  labs(x = 'Year', y = 'Survey Biomass (kmt)', color = '', fill = '') #+
-# facet_wrap(~scenario, ncol = 1, scales = 'fixed')
+    ggplot(sobs, aes(x = year,
+                     y = abund_mean ,
+                     group= interaction(replicate, scenario),
+                     fill = scenario,
+                     color = scenario)) +
+      geom_point() +
+      {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
+      {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
+      {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,8500))} +
+      # geom_ribbon(aes(ymin = abund_mean-abund_mean*abund_cv,
+      #                   ymax =  abund_mean+abund_mean *abund_cv,
+      #                   color = scenario ),
+      #               alpha = 0.2, width = 0, color = NA) +
+      geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
+                        ymax =  abund_mean+abund_mean *abund_cv,
+                        color = scenario ),
+                    alpha = 0.2, width = 0) +
+      scale_fill_manual(values = scenPal, labels = scenLabs)+
+      scale_color_manual(values = scenPal, labels = scenLabs)+
+
+      theme(  strip.background = element_blank()  ,
+              legend.position = 'none'
+      )+
+      labs(x = 'Year', y = 'Survey Biomass (kmt)', color = '', fill = '') #+
+    # facet_wrap( ~ species, scales = 'free_y', labeller = as_labeller(sppLabs)) #+
+    # facet_wrap(~scenario, ncol = 1, scales = 'fixed')
 
 
-ggsave(last_plot(),
-       file =here('figs','survobs_by_scenario_95ci-1.0.png'),
-       width = 8/3, height = 3, unit = 'in', dpi = 400)
+    ggsave(last_plot(),
+           file =here('figs',paste0('survobs_by_scenario_95ci-',species,'-',fc,'.png')),
+           width = 4, height = 3, unit = 'in', dpi = 400)
+  } ## end fractional coverage
+} ## end species
 
 # deprecated ----
 
