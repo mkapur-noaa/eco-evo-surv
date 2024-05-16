@@ -52,7 +52,7 @@ stopImplicitCluster();stopCluster()
 # greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-15/rep',.)] %>%
+  .[grepl('2024-05-16/rep',.)] %>%
   .[grepl('Herring',.)] #%>%
 
 # .[!grepl(greppy, .)]
@@ -189,7 +189,7 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
     {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
     {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
     {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
-    # facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
+    facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
     labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') +
     theme(legend.position = 'none')
   # theme_bw()
@@ -212,12 +212,18 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
       lapply(., FUN = read.csv) %>%
       bind_rows() %>%
       mutate(abund_mean = abund_mean/1000) %>%
-      filter(replicate == 0)
+      # filter(replicate == 0) %>%
+      group_by(year,scenario, species) %>%
+      summarize(med=median(abund_mean  ),
+                lwr50=quantile(abund_mean  , .25),
+                upr50=quantile(abund_mean  , .75),
+                lwr95=quantile(abund_mean  , .0275),
+                upr95=quantile(abund_mean  , .975))
 
     # sobs$scenario <- factor(sobs$scenario, levels = scenLabs2$Var2[c(2,1,3,4)])
 
     ggplot(sobs, aes(x = year,
-                     y = abund_mean ,
+                     y = med ,
                      group= interaction(replicate, scenario),
                      fill = scenario,
                      color = scenario)) +
@@ -225,12 +231,12 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
       {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
       {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
       {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
-      # geom_ribbon(aes(ymin = abund_mean-abund_mean*abund_cv,
+      # geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
       #                   ymax =  abund_mean+abund_mean *abund_cv,
       #                   color = scenario ),
-      #               alpha = 0.2, width = 0, color = NA) +
-      geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
-                        ymax =  abund_mean+abund_mean *abund_cv,
+      #               alpha = 0.2, width = 0) +
+      geom_errorbar(aes(ymin = lwr50,
+                        ymax =  upr50,
                         color = scenario ),
                     alpha = 0.2, width = 0) +
       scale_fill_manual(values = scenPal, labels = scenLabs)+
@@ -239,8 +245,8 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
       theme(  strip.background = element_blank()  ,
               legend.position = 'none'
       )+
-      labs(x = 'Year', y = 'Survey Biomass (kmt)', color = '', fill = '') #+
-    # facet_wrap( ~ species, scales = 'free_y', labeller = as_labeller(sppLabs)) #+
+      labs(x = 'Year', y = 'Survey Biomass (kmt)', color = '', fill = '') +
+    facet_wrap( ~ species, scales = 'free_y', labeller = as_labeller(sppLabs)) #+
     # facet_wrap(~scenario, ncol = 1, scales = 'fixed')
 
 
