@@ -18,15 +18,15 @@ registerDoParallel(cl)
 ## one species, one replicate, one scenario, two fc scenarios = 2 mins
 ## three spp, one replicate, four scenarios  = 4 mins
 foreach(scenario=1:4) %:%
-  # foreach(species = c(1,9)) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
-  foreach(replicate=6:8)  %dopar%  {
+  foreach(species = c(1)) %:%
+  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
+  foreach(repl=1:10)  %dopar%  {
 
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
 
     scen_use = scenario;
     sp_use = species;
-    replicate_use = replicate;
+    replicate_use = repl;
 
     for(fc_use in c(1,0.15)){
       build_Data(scenario=scen_use,
@@ -74,7 +74,7 @@ stopImplicitCluster();stopCluster()
 
 #* MRE by rep, scenario, species ----
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 4) %>%
-  .[grepl('2024-05-08/rep',.)] %>%
+  .[grepl('2024-05-16/rep',.)] %>%
   .[grepl('Herring',.)] %>%
   .[grepl('perfect_information',.)]
 
