@@ -70,7 +70,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
   asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
   asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
-  asap3$dat$catch_cv <- matrix(0.05,asap3$dat$n_years )
+  asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
 
   #* selex ----
@@ -80,7 +80,7 @@ run_WHAM <-function(yrs_use = 2010:2099, ## years to run the assessment
   #                              model_name=file_suffix2,
   #                              selectivity=list(model=c('logistic','age-specific'),
   #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  #                                               initial_pars=list(c(7,0.9), ## fully selected fishery
+  #                                               initial_pars=list(c(7,0.9), ## logistic fishery
   #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
   #                                               fix_pars=list(NULL,
   #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
