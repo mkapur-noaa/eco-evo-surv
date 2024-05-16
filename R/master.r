@@ -28,13 +28,13 @@ foreach(scenario=1:4) %:%
     sp_use = species;
     replicate_use = repl;
 
-    for(fc_use in c(1,0.15)){
+    for(fc_use in c(1,0.15,0.15001)){
       build_Data(scenario=scen_use,
                  sppIdx = sp_use,
                  repID = replicate_use,
                  yrs_use = 2010:2080, ## years to extract data for
-                 # srv_selex = ifelse(fc_use == 1, NA, 8), ## age at 50% selex
-                 # obs_error = ifelse(fc_use == 1, NA, 0.1), ## observation error for surveys
+                 # srv_selex = ifelse(fc_use == 0.15001, 8, NA), ## age at 50% selex
+                 # obs_error = ifelse(fc_use == 0.15001, 0.1, NA), ## observation error for surveys
                  fractional_coverage_use = fc_use, ## fractional coverage of survey
                  srv_selex = NA, ## age at 50% selex
                  obs_error = NA, ## observation error for surveys
@@ -61,12 +61,13 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run) %dopar% {
+foreach(file_use = files_to_run[6:12]) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
-
-  run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
-           fractional_coverage_use = 1, ## which survey setup to read from
-           file_suffix = file_use)
+  for(fc_use in c(1,0.15)){
+    run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
+             fractional_coverage_use = fc_use, ## which survey setup to read from
+             file_suffix = file_use)
+  }
 } ## end files loop
 stopImplicitCluster();stopCluster()
 
@@ -108,34 +109,37 @@ ggplot(mre_all, aes(x = year, y = med,
 
 
 ggsave(last_plot(),
-       file =here('figs',paste0(Sys.Date(),'-MRE_by_scenario-95ci.png')),
+       file =here('figs',paste0(Sys.Date(),'-MRE_by_scenario-95ci-perfectinfo.png')),
        width = 5, height = 5, unit = 'in', dpi = 400)
 
 
 #* 2060 map of biomass by spp ----
 tabund_spatial <- list.files(files_to_run,
-                             pattern = 'true_biomass_spatial.csv',
+                             pattern = 'true_biomass_ys\\b.csv',
                              recursive = TRUE,
                              full.names = TRUE) %>%
-  lapply(., FUN = read.csv) %>% bind_rows() #%>%
+  .[grepl('rep0',.)] %>%
+  lapply(., FUN = read.csv) %>%
+  bind_rows()
 # summarise(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),
 #           .by = c(year, species, scenario))
 
 maplist = list()
+for(spp in c(sppLabs2$Var2[sppLabs2$Var4])){
 for(s in 1:4){
-  maplist[[s]] <-  tabund_spatial %>%
-    filter(year %in% c(2045) &
-             scenario == scenLabs2$Var2[s],
-           species == "AtlanticCod",
-           replicate == 0)  %>%
+
+  p<- tabund_spatial %>%
+    filter(year %in% c(2060) &
+             scenario == scenLabs2$Var2[s] &
+             species == spp)  %>%
     ggplot(data = ., aes(x = lat, y = long,
-                         fill = abundance_rescale))+
+                         fill = abundance_rescale)) +
     theme_void()+
     geom_raster()+
     # scale_fill_viridis_c(na.value = NA)+
     scale_fill_gradient2(mid = "#FFF5D1",
                          low = "#efeee7",
-                         high = scenPal[scenario])+
+                         high = scenPal[s])+
     theme(
       legend.background = element_blank(),
       plot.background = element_blank(),
@@ -146,17 +150,27 @@ for(s in 1:4){
       legend.position =  'none')
   # facet_grid( scenario~.,
   #             labeller = as_labeller(scenLabs))
+  ggsave(p,
+         file =here('figs',paste0('biomass_maps_by_scenario_2060-',scenLabs2$Var2[s],"-",spp,'.png')),
+         width = 2, height = 2, unit = 'in', dpi = 400)
+  # invisible(mapply(ggsave,
+  #                  file = here('figs',paste0('biomass_maps_by_scenario_2060-', scenLabs2$Var2[s],"-",spp,'.png')),
+  #                  plot=l))
 
-}
+} ## end scenario
 
-png(here('figs','biomass_maps_by_scenario_2045.png'),
-    width = 3, height = 10, unit = 'in', res = 400)
-Rmisc::multiplot(plotlist = maplist, cols = 1)
-dev.off()
+# png(here('figs','biomass_maps_by_scenario_2045.png'),
+#     width = 3, height = 10, unit = 'in', res = 400)
+# Rmisc::multiplot(plotlist = maplist, cols = 1)
+# dev.off()
+#
+# ggsave(Rmisc::multiplot(plotlist = maplist, cols = 1),
+#        file =here('figs',paste0('biomass_maps_by_scenario_2060-',species,'.png')),
+#        width = 3, height = 10, unit = 'in', dpi = 400)
 
-ggsave(Rmisc::multiplot(plotlist = maplist, cols = 1),
-       file =here('figs','biomass_maps_by_scenario_2045.png'),
-       width = 3, height = 10, unit = 'in', dpi = 400)
+} ## end species
+
+
 
 #* biomass timeseries by scenarios ----
 for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
