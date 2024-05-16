@@ -27,17 +27,17 @@ foreach(scenario=1:4) %:%
     scen_use = scenario;
     sp_use = species;
     replicate_use = repl;
-
-    for(fc_use in c(1,0.15,0.15001)){
+    # for(fc_use in c(1,0.15,0.15001)){
+    for(fc_use in c(0.15001)){
       build_Data(scenario=scen_use,
                  sppIdx = sp_use,
                  repID = replicate_use,
                  yrs_use = 2010:2080, ## years to extract data for
                  # srv_selex = ifelse(fc_use == 0.15001, 8, NA), ## age at 50% selex
-                 # obs_error = ifelse(fc_use == 0.15001, 0.1, NA), ## observation error for surveys
+                 obs_error = ifelse(fc_use == 0.15001, 0.1, NA), ## observation error for surveys
                  fractional_coverage_use = fc_use, ## fractional coverage of survey
                  srv_selex = NA, ## age at 50% selex
-                 obs_error = NA, ## observation error for surveys
+                 # obs_error = NA, ## observation error for surveys
                  units = 'biomass',
                  units_scalar = 1,
                  do_GAM = FALSE)
@@ -61,7 +61,7 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run[6:12]) %dopar% {
+foreach(file_use = files_to_run[31:40]) %dopar% {
   invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
   for(fc_use in c(1,0.15)){
     run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
@@ -74,19 +74,19 @@ stopImplicitCluster();stopCluster()
 ## Summarize results across all species, scenarios, simulations ----
 
 #* MRE by rep, scenario, species ----
-files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 4) %>%
-  .[grepl('2024-05-16/rep',.)] %>%
-  .[grepl('Herring',.)] %>%
-  .[grepl('perfect_information',.)]
+# files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 4) %>%
+#   .[grepl('2024-05-16/rep',.)] %>%
+#   .[grepl('Herring',.)] %>%
+#   .[grepl('perfect_information',.)]
 
 
-mre_all <- list.files(files_to_run,
+mre_all <- list.files(files_to_run[1:16],
                       pattern = 'ssb_mre.csv',
                       recursive = TRUE,
                       full.names = TRUE) %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
-  group_by(year,scenario, species) %>%
+  group_by(year,scenario, species, fc) %>%
   summarize(med=median(MRE_scaled),
             lwr50=quantile(MRE_scaled, .25),
             upr50=quantile(MRE_scaled, .75),
@@ -96,6 +96,7 @@ mre_all <- list.files(files_to_run,
 
 ggplot(mre_all, aes(x = year, y = med,
                     color = scenario, fill = scenario)) +
+  geom_hline(yintercept = 0, color = 'grey50', linetype = 'dotted') +
   geom_line() +
   geom_ribbon(aes(ymin = lwr95, ymax = upr95),
               alpha = 0.15, color = NA) +
@@ -103,9 +104,9 @@ ggplot(mre_all, aes(x = year, y = med,
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
-  geom_hline(yintercept = 0, color = 'pink') +
+
   theme(legend.position = 'none')+
-  facet_wrap(~species,labeller = as_labeller(sppLabs))
+  facet_grid(scenario+fc~species,labeller = as_labeller(sppLabs))
 
 
 ggsave(last_plot(),
