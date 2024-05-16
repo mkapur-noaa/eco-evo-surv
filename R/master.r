@@ -159,7 +159,8 @@ ggsave(Rmisc::multiplot(plotlist = maplist, cols = 1),
        width = 3, height = 10, unit = 'in', dpi = 400)
 
 #* biomass timeseries by scenarios ----
-for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
+for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
+
   tabund <- list.files(files_to_run,
                        pattern ="*true_biomass_y\\b.csv",
                        recursive = TRUE,
@@ -168,13 +169,16 @@ for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
     lapply(., FUN = read.csv) %>%
     bind_rows() %>%
     group_by(year,scenario, species) %>%
-    summarize(med=median(ssb_true )/1000,
-              lwr50=quantile(ssb_true , .25)/1000,
-              upr50=quantile(ssb_true , .75)/1000,
-              lwr95=quantile(ssb_true , .0275)/1000,
-              upr95=quantile(ssb_true , .975)/1000)
-
-
+    summarize(med=median(total_biomass  )/1000,
+              lwr50=quantile(total_biomass  , .25)/1000,
+              upr50=quantile(total_biomass  , .75)/1000,
+              lwr95=quantile(total_biomass  , .0275)/1000,
+              upr95=quantile(total_biomass  , .975)/1000)
+    # summarize(med=median(ssb_true )/1000,
+    #           lwr50=quantile(ssb_true , .25)/1000,
+    #           upr50=quantile(ssb_true , .75)/1000,
+    #           lwr95=quantile(ssb_true , .0275)/1000,
+    #           upr95=quantile(ssb_true , .975)/1000)
 
   ggplot(tabund, aes(x = year, y = med, fill = scenario, color = scenario)) +
     geom_line() +
@@ -182,18 +186,21 @@ for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
                 alpha = 0.2, color = NA) +
     scale_fill_manual(values = scenPal, labels = scenLabs)+
     scale_color_manual(values = scenPal, labels = scenLabs)+
+    {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
+    {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
+    {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
     # facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
-    labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') #+
-    # theme(legend.position = 'top')
+    labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') +
+    theme(legend.position = 'none')
   # theme_bw()
 
   ggsave(last_plot(),
-         file =here('figs',paste0('biomass_by_scenario_50ci-',species,'.png')),
-         width = 4, height = 3, unit = 'in', dpi = 400)
+         file =here('figs',paste0('biomass_by_scenario-95ci-',species,'.png')),
+         width = 3, height = 4, unit = 'in', dpi = 400)
 } ## end species
 
 #* survey time series by scenario ----
-for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
+for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
   for(fc in c(1,0.15)){
 
     ## strip one species and coverage-specific replicate
@@ -217,7 +224,7 @@ for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
       geom_point() +
       {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
       {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
-      {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,8500))} +
+      {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
       # geom_ribbon(aes(ymin = abund_mean-abund_mean*abund_cv,
       #                   ymax =  abund_mean+abund_mean *abund_cv,
       #                   color = scenario ),
@@ -239,7 +246,7 @@ for(species in seq_along(c(sppLabs2$Var2[sppLabs2$Var4]))){
 
     ggsave(last_plot(),
            file =here('figs',paste0('survobs_by_scenario_95ci-',species,'-',fc,'.png')),
-           width = 4, height = 3, unit = 'in', dpi = 400)
+           width = 3, height = 4, unit = 'in', dpi = 400)
   } ## end fractional coverage
 } ## end species
 
