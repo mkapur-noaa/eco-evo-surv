@@ -235,10 +235,8 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
       #                   ymax =  abund_mean+abund_mean *abund_cv,
       #                   color = scenario ),
       #               alpha = 0.2, width = 0) +
-      geom_errorbar(aes(ymin = lwr50,
-                        ymax =  upr50,
-                        color = scenario ),
-                    alpha = 0.2, width = 0) +
+      {if(fc != 1) geom_errorbar(aes(ymin = lwr50,   ymax =  upr50, color = scenario ),  alpha = 0.2, width = 0)} +
+      {if(fc==1) geom_errorbar(aes(ymin = med-0.05*med,   ymax =   med+0.05*med, color = scenario ),  alpha = 0.2, width = 0)} +
       scale_fill_manual(values = scenPal, labels = scenLabs)+
       scale_color_manual(values = scenPal, labels = scenLabs)+
 
