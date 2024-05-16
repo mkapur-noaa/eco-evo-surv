@@ -1,0 +1,5 @@
+library(readr)
+acod_geodata <- read_csv("outputs/wham_runs/AtlanticCod-CC_Evo/2024-05-15/rep0/AtlanticCod-CC_Evo-0-true_biomass_ys.csv")
+coords_use  =  as.matrix(cbind(acod_geodata$lat,acod_geodata$long), ncol = 2)
+v1 <- variog( coords = coords_use, data =acod_geodata$tot_val)
+plot(v1)
