@@ -145,15 +145,18 @@ build_Data<-function(scenario,
       tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
       dplyr::select(-year)
 
-
-
-
     write.table(maturity_data,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
                 row.names = FALSE)
-
-
+      ## putative maturity curve
+      maturity_pars <- optim(par = c(log(19),5),
+                             fn = maturity_optim_fn)$par
+      maturity_curve <- logistic(x = 1:max_age_pop, x0=maturity_pars[1], k = maturity_pars[2])
+      write.table(maturity_curve,
+                  sep = ' ',
+                  paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'),
+                  row.names = FALSE)
 
   } ## end if fractional_coverage_use == 1
   ## Survey data ----
@@ -165,14 +168,7 @@ build_Data<-function(scenario,
   survey_selex <<- if(is.na(srv_selex)) {
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
   } else if(srv_selex == 'mat'){
-    ## putative maturity curve
-    maturity_pars <- optim(par = c(log(19),5),
-                           fn = maturity_optim_fn)$par
-    maturity_curve <- logistic(x = 1:max_age_pop, x0=maturity_pars[1], k = maturity_pars[2])
-    write.table(maturity_curve,
-                sep = ' ',
-                paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'),
-                row.names = FALSE)
+    maturity_curve <- read.csv(paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'))
     cbind(age = 1:max_age_pop, slx = maturity_curve)
   }
   else {
