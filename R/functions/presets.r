@@ -89,10 +89,15 @@ list.dirs.depth.n <- function(p, n) {
 logistic <- function(x,x0,k){
   return(1/(1+exp(-k*(x-x0))))
 }
+# cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(max_age_pop-srv_selex))))
 
-maturity_optim_fn <- function(pars = c(x0,k)){
-  x0_use = pars[1];k_use = pars[2]
-  mat_temp <- logistic(x = 1:max_age_pop, x0=x0_use, k = k_use)
+logistic2 <- function(x,x0,amax){
+  return( 1/(1+exp(-log(19)*((x)-x0)/(amax-x0))))
+}
+
+maturity_optim_fn <- function(pars){
+  x0_use = pars[1];
+  mat_temp <- logistic2(x = 1:max_age_pop, x0=x0_use, amax = max_age_pop)
   obj <- 0
   for(i in 1:90){ ## terminal year has an NA
     obj <- obj+sum((maturity_data[i,] - mat_temp)^2)
