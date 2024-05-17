@@ -166,17 +166,16 @@ build_Data<-function(scenario,
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
   } else if(srv_selex == 'mat'){
     ## putative maturity curve
-    maturity_pars <- optim(par =max_age_pop/3,
-                           method = 'Brent',
-                           lower = 0, upper = max_age_pop,
+    maturity_pars <- optim(par = c(log(19),5),
                            fn = maturity_optim_fn)$par
-    maturity_curve <- logistic2(x = 1:max_age_pop, x0=maturity_pars[1], amax = max_age_pop)
+    maturity_curve <- logistic(x = 1:max_age_pop, x0=maturity_pars[1], k = maturity_pars[2])
     write.table(maturity_curve,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'),
                 row.names = FALSE)
     cbind(age = 1:max_age_pop, slx = maturity_curve)
-  } else {
+  }
+  else {
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(max_age_pop-srv_selex))))
   }
 
