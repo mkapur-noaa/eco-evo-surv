@@ -85,9 +85,27 @@ list.dirs.depth.n <- function(p, n) {
 }
 
 
+## for use in optimizers
+logistic <- function(x,x0,k){
+  return(1/(1+exp(-k*(x-x0))))
+}
+
+maturity_optim_fn <- function(pars = c(x0,k)){
+  x0_use = pars[1];k_use = pars[2]
+  mat_temp <- logistic(x = 1:max_age_pop, x0=x0_use, k = k_use)
+  obj <- 0
+  for(i in 1:90){ ## terminal year has an NA
+    obj <- obj+sum((maturity_data[i,] - mat_temp)^2)
+  }
+  return(obj)
+}
 ## build and save parameter lookup tables ----
 
 # parm_path <- "F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/cc_evo/ns_param-species.csv" ## stored once for all runs, not time-invariant
+
+
+#* putative maturity curves
+
 
 #* max age (lifespan)
 # read.csv(parm_path, header = F) %>%

@@ -146,6 +146,8 @@ build_Data<-function(scenario,
       dplyr::select(-year)
 
 
+
+
     write.table(maturity_data,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
@@ -162,7 +164,18 @@ build_Data<-function(scenario,
   #* survey selectivity ----
   survey_selex <<- if(is.na(srv_selex)) {
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
-  } else {
+  } else if(srv_selex == 'mat'){
+    ## putative maturity curve
+    maturity_pars <- optim(par = c(log(19),5),
+                           fn = maturity_optim_fn)$par
+    maturity_curve <- logistic(x = 1:max_age_pop, x0=maturity_pars[1], k = maturity_pars[2])
+    write.table(maturity_curve,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'),
+                row.names = FALSE)
+    cbind(age = 1:max_age_pop, slx = maturity_curve)
+  }
+  else {
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(max_age_pop-srv_selex))))
   }
 
