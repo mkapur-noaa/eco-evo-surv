@@ -95,12 +95,12 @@ logistic2 <- function(x,x0,amax){
   return( 1/(1+exp(-log(19)*((x)-x0)/(amax-x0))))
 }
 
-maturity_optim_fn <- function(pars = c(x0,k)){
+maturity_optim_fn <- function(pars = c(x0,k), md = maturity_data, amax = max_age_pop){
   x0_use = pars[1];k_use = pars[2]
-  mat_temp <- logistic(x = 1:max_age_pop, x0=x0_use, k = k_use)
+  mat_temp <- logistic(x = 1:amax, x0=x0_use, k = k_use)
   obj <- 0
   for(i in 1:90){ ## terminal year has an NA
-    obj <- obj+sum((maturity_data[i,] - mat_temp)^2)
+    obj <- obj+sum((md[i,] - mat_temp)^2)
   }
   return(obj)
 }

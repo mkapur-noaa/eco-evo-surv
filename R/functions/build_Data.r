@@ -149,14 +149,17 @@ build_Data<-function(scenario,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
                 row.names = FALSE)
-      ## putative maturity curve
-      maturity_pars <- optim(par = c(log(19),5),
-                             fn = maturity_optim_fn)$par
-      maturity_curve <- logistic(x = 1:max_age_pop, x0=maturity_pars[1], k = maturity_pars[2])
-      write.table(maturity_curve,
-                  sep = ' ',
-                  paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'),
-                  row.names = FALSE)
+
+    ## putative maturity curve
+    maturity_pars <- optim(par = c(log(19),5),
+                           fn = maturity_optim_fn,
+                           md = maturity_data,
+                           amax = max_age_pop)$par
+    maturity_curve <- logistic(x = 1:max_age_pop, x0=maturity_pars[1], k = maturity_pars[2])
+    write.table(maturity_curve,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'),
+                row.names = FALSE)
 
   } ## end if fractional_coverage_use == 1
   ## Survey data ----
