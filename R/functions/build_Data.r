@@ -144,10 +144,15 @@ build_Data<-function(scenario,
                       fill = list(value = 1)) %>%
       tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = value) %>%
       dplyr::select(-year)
+
+
     write.table(maturity_data,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_maturity.csv'),
                 row.names = FALSE)
+
+
+
   } ## end if fractional_coverage_use == 1
   ## Survey data ----
   ## sample and build index inputs  (year, index as biom/numbers, cv, vector of ages in numbers/biomass, inputN for comps)
@@ -158,7 +163,7 @@ build_Data<-function(scenario,
   survey_selex <<- if(is.na(srv_selex)) {
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
   } else {
-    cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(15-srv_selex))))
+    cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(max_age_pop-srv_selex))))
   }
 
   #* filepaths for abundance, biomass ----
