@@ -172,9 +172,8 @@ build_Data<-function(scenario,
     cbind(age = 1:max_age_pop, slx = rep(1,max_age_pop))
   } else if(srv_selex == 'mat'){
     maturity_curve <- read.csv(paste0(wham.dir,"/",file_suffix,'-maturity_curve.csv'))
-    cbind(age = 1:max_age_pop, slx = maturity_curve)
-  }
-  else {
+    cbind(age = 1:max_age_pop, slx = maturity_curve$x)
+  } else {
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(max_age_pop-srv_selex))))
   }
 
