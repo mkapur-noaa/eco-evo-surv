@@ -119,15 +119,12 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                               c(1:asap3$dat$n_ages))), ## fix 'em all
                                NAA_re = list(sigma="rec", cor="iid"))
 
-  input2$data$fracyr_indices
-  input2$data$fracyr_SSB
+  # input2$data$fracyr_indices
+  # input2$data$fracyr_SSB
 
 
   m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
   check_convergence(m2)
-
-
-  m2/
 
     #
     #
@@ -171,21 +168,21 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # m2b <- fit_wham(input2b, do.osa = F) # turn off OSA residuals to save time
   # # check_convergence(m2b)
   #
-  input3 <- prepare_wham_input(asap3,
-                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-                               model_name=file_suffix2,
-                               selectivity=list(model=c('age-specific','age-specific'),
-                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
-                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
-                                                fix_pars=list(NULL,   c(1:asap3$dat$n_ages))), ## fix 'em all
-                               # selectivity=list(model=c('logistic','logistic'),
-                               #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                               #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-                               #                                    c(7,0.9))), ## alpha, b1, survey
-                               NAA_re = list(sigma="rec", cor="iid"))
-  m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
-  check_convergence(m3)
+  # input3 <- prepare_wham_input(asap3,
+  #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                              model_name=file_suffix2,
+  #                              selectivity=list(model=c('age-specific','age-specific'),
+  #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
+  #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  #                                               fix_pars=list(NULL,   c(1:asap3$dat$n_ages))), ## fix 'em all
+  #                              # selectivity=list(model=c('logistic','logistic'),
+  #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+  #                              #                                    c(7,0.9))), ## alpha, b1, survey
+  #                              NAA_re = list(sigma="rec", cor="iid"))
+  # m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
+  # check_convergence(m3)
   # #
   # # # input4 <- prepare_wham_input(asap3,
   # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
@@ -221,7 +218,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
 
   if(mod_use$is_sdrep){
     rpt <- mod_use$report()
-    rpt$total_biomass <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
+    rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
@@ -232,13 +229,15 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              # depl_est = ssb_est/ssb0_est,
              # depl_true = ssb_true/ssb0_true,
              # rel.ssb.vals= ssb_est/exp(std[SSB.t.ind, 1]),
-             ssb_est_cv = std[ssb.ind, 2],
-             lower = ssb_est - ssb_est*ssb_est_cv,
-             upper = ssb_est + ssb_est*ssb_est_cv,
+             ssb_est_cv = std[ssb.ind, 2], ## maturity is fixed so cv holds for total
+             lower = totbio_est - totbio_est*ssb_est_cv,
+             upper = totbio_est + totbio_est*ssb_est_cv,
+             # lower = ssb_est - ssb_est*ssb_est_cv,
+             # upper = ssb_est + ssb_est*ssb_est_cv,
              # MRE_depl = (depl_est-depl_true)/depl_true,
              # MRE_scaled_depl = 100*MRE_depl,
              MRE0 = (ssb_est-ssb_true)/ssb_true,
-             MRE = (total_biomass -rpt$total_biomass)/total_biomass ,
+             MRE = (ssb_true -rpt$total_biomass_est)/ssb_true,
              MRE_scaled = 100*MRE,
              fc = fractional_coverage_use)
   } else{
@@ -253,7 +252,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              fc = fractional_coverage_use)
   }
 
-  cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
+  # cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
   cat(median(abs(mre_table$MRE_scaled)),"\n")
 
   ssb_compare <-  mre_table %>%
