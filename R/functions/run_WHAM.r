@@ -118,18 +118,27 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                 fix_pars=list(NULL,
                                                               c(1:asap3$dat$n_ages))), ## fix 'em all
                                NAA_re = list(sigma="rec", cor="iid"))
+
+  input2$data$fracyr_indices
+  input2$data$fracyr_SSB
+
+
   m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
   check_convergence(m2)
-  #
-  #
-  # # input5 <- prepare_wham_input(asap3,
-  # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-  # #                              model_name=file_suffix2,
-  # #                              selectivity=list(model=c('double-logistic','age-specific'),
-  # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-  # #                                                                 rep(1, asap3$dat$n_ages))), ## logistic survey
-  # #                              NAA_re = list(sigma="rec", cor="iid"))
+
+
+  m2/
+
+    #
+    #
+    # # input5 <- prepare_wham_input(asap3,
+    # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+    # #                              model_name=file_suffix2,
+    # #                              selectivity=list(model=c('double-logistic','age-specific'),
+    # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+    # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+    # #                                                                 rep(1, asap3$dat$n_ages))), ## logistic survey
+    # #                              NAA_re = list(sigma="rec", cor="iid"))
   # # m5 <- fit_wham(input5, do.osa = F) # turn off OSA residuals to save time
   # # # exp(m1$par[grep('N1',names(m1$par))])
   # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
@@ -203,7 +212,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
   # # # res$best
   # #
-  mod_use <- m3
+  mod_use <- m2
   save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
@@ -226,49 +235,35 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # ssb0_true <-1.1759 *ssb0_est
   # ssb0_true/ssb0_est
 
-# rpt <- mod_use$report()
-# rpt$SSB
-# rpt$NAA[1,] * rpt$ *rpt$MAA[1,] * exp(-rpt$ZAA[1,]*rpt$frac)
+  #
+  # rpt$SSB
+  # rpt$NAA[1,] * rpt$ *rpt$MAA[1,] * exp(-rpt$ZAA[1,]*rpt$frac)
 
-# rpt$SSB/rpt$MAA
-# SSB(0) += NAA(0,a) * waa(waa_pointer_ssb-1,0,a) * mature(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0));
+  # rpt$SSB/rpt$MAA
+  # SSB(0) += NAA(0,a) * waa(waa_pointer_ssb-1,0,a) * mature(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0));
+  #
+
 
   if(mod_use$is_sdrep){
+    rpt <- mod_use$report()
+    rpt$total_biomass <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
-    ## 'true' F is yield/truebio * fish selex
-
-    # yield <- asap3$dat$CAA_mats[[1]][,2] %>%
-    #   data.frame() %>%
-    #   mutate(year = 2009+(1:length(mod_use$years)),
-    #          yield = 10*.) %>%
-    #   dplyr::select(year, yield )
-    #
-    # fishsel <- mod_use$report()$selAA[[1]][1,] %>%
-    #   data.frame() %>%
-    #   mutate(age = 1:asap3$dat$n_ages) %>%
-    #   dplyr::select(slx = '.', age)
-    #
-    # merge(true_biomass_age,fishsel,by = 'age') %>%
-    #   group_by(year) %>%
-    #   summarise(expbio0 = sum(value*slx)) %>% ## collapse across age
-    #   ungroup() %>%
-    #   merge(., yield, by = 'year') %>%
-    #   mutate(expbio = yield/expbio0)
-
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = exp(std[ssb.ind, 1]) ,
              ssb_ratio = ssb_est/ssb_true,
+             totbio_est =   rpt$total_biomass,
              # depl_est = ssb_est/ssb0_est,
              # depl_true = ssb_true/ssb0_true,
              # rel.ssb.vals= ssb_est/exp(std[SSB.t.ind, 1]),
              ssb_est_cv = std[ssb.ind, 2],
              lower = ssb_est - ssb_est*ssb_est_cv,
              upper = ssb_est + ssb_est*ssb_est_cv,
-             MRE_depl = (depl_est-depl_true)/depl_true,
-             MRE_scaled_depl = 100*MRE_depl,
-             MRE = (ssb_est-ssb_true)/ssb_true,
+             # MRE_depl = (depl_est-depl_true)/depl_true,
+             # MRE_scaled_depl = 100*MRE_depl,
+             MRE0 = (ssb_est-ssb_true)/ssb_true,
+             MRE = (total_biomass -rpt$total_biomass)/total_biomass ,
              MRE_scaled = 100*MRE,
              fc = fractional_coverage_use)
   } else{
@@ -284,9 +279,10 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   }
 
   cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
+  cat(median(abs(mre_table$MRE_scaled)),"\n")
 
   ssb_compare <-  mre_table %>%
-    dplyr::select(year, ssb_true, ssb_est, lower, upper) %>%
+    dplyr::select(year, ssb_true, totbio_est, lower, upper) %>%
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
     geom_line() +
@@ -300,11 +296,11 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     theme(legend.position='top') +
     labs(color = '') +
     {if(spname == 'AtlanticHerring') scale_y_continuous(limits = c(500,3000))}
-    # {if(spname == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
-    # {if(spname == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))}
-    # scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
+  # {if(spname == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
+  # {if(spname == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))}
+  # scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
 
-  mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled_depl)) +
+  mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
     # scale_x_continuous(limits = c(2040,2099))+
     scale_y_continuous(limits = c(-100,100)) +
