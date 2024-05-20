@@ -219,31 +219,6 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
 
-  # sort(names(mod_use$report()))
-  # mod_use$report()['log_SPR0'] #vector of yearly log(unfished SSB/R)
-  #
-  # spr0_annual <- exp( mod_use$report()['log_SPR0'][[1]])
-  #
-  # spr0 <- exp(mod_use$report()['log_SPR0_static'][[1]]) ## straight up SPR0
-  # r0 <- exp(mod_use$report()['mean_rec_pars'][[1]][1])##value of R used for SSB and Yield
-  # ssb0_est <- spr0*r0/10 ## model estimate
-  # ## get OM ssb0 using N1, which was run without fishing
-  # mature_naa_unfished0 <- rbind(1.17*asap3$dat$N1_ini,
-  #                               colMeans(asap3$dat$maturity),
-  #                               colMeans(asap3$dat$WAA_mats[[1]]))
-  # ssb0_true <- sum(matrixStats::colProds(mature_naa_unfished0))
-  # # ssb0_true <-1.1759 *ssb0_est
-  # ssb0_true/ssb0_est
-
-  #
-  # rpt$SSB
-  # rpt$NAA[1,] * rpt$ *rpt$MAA[1,] * exp(-rpt$ZAA[1,]*rpt$frac)
-
-  # rpt$SSB/rpt$MAA
-  # SSB(0) += NAA(0,a) * waa(waa_pointer_ssb-1,0,a) * mature(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0));
-  #
-
-
   if(mod_use$is_sdrep){
     rpt <- mod_use$report()
     rpt$total_biomass <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
