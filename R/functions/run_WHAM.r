@@ -109,53 +109,54 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # # check_convergence(m1)
   # # #
   if(fractional_coverage_use != 0.15001){
-  input2 <- prepare_wham_input(asap3,
-                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-                               model_name=file_suffix2,
-                               selectivity=list(model=c('double-logistic','age-specific'),
-                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
-                                                fix_pars=list(NULL,
-                                                              c(1:asap3$dat$n_ages))), ## fix 'em all
-                               NAA_re = list(sigma="rec", cor="iid"))
+    input2 <- prepare_wham_input(asap3,
+                                 recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+                                 model_name=file_suffix2,
+                                 selectivity=list(model=c('double-logistic','age-specific'),
+                                                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                                                  initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+                                                                    rep(1, asap3$dat$n_ages)), ## fully selected survey
+                                                  fix_pars=list(NULL,
+                                                                c(1:asap3$dat$n_ages))), ## fix 'em all
+                                 NAA_re = list(sigma="rec", cor="iid"))
 
-  # input2$data$fracyr_indices
-  # input2$data$fracyr_SSB
-  m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
-  check_convergence(m2)
+    # input2$data$fracyr_indices
+    # input2$data$fracyr_SSB
+    m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
+    check_convergence(m2)
+    mod_use <- m2
   }
 
   if(fractional_coverage_use == 0.15001){
-      input6 <- prepare_wham_input(asap3,
-                               recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-                               model_name=file_suffix2,
-                               selectivity=list(model=c('double-logistic','logistic'),
-                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-                                                                  c(7,0.9)), ## logistic survey (maturity curve)
-                                                fix_pars=list(NULL,NULL)), ## fix 'em all
-                               NAA_re = list(sigma="rec", cor="iid"))
+    input6 <- prepare_wham_input(asap3,
+                                 recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+                                 model_name=file_suffix2,
+                                 selectivity=list(model=c('double-logistic','logistic'),
+                                                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+                                                  initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+                                                                    c(7,0.9)), ## logistic survey (maturity curve)
+                                                  fix_pars=list(NULL,NULL)), ## fix 'em all
+                                 NAA_re = list(sigma="rec", cor="iid"))
 
-  # input2$data$fracyr_indices
-  # input2$data$fracyr_SSB
-  m6 <- fit_wham(input6, do.osa = F) # turn off OSA residuals to save time
-  check_convergence(m6)
-
+    # input2$data$fracyr_indices
+    # input2$data$fracyr_SSB
+    m6 <- fit_wham(input6, do.osa = F) # turn off OSA residuals to save time
+    check_convergence(m6)
+    mod_use <- m6
   }
 
 
 
-    #
-    #
-    # # input5 <- prepare_wham_input(asap3,
-    # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-    # #                              model_name=file_suffix2,
-    # #                              selectivity=list(model=c('double-logistic','age-specific'),
-    # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-    # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-    # #                                                                 rep(1, asap3$dat$n_ages))), ## logistic survey
-    # #                              NAA_re = list(sigma="rec", cor="iid"))
+  #
+  #
+  # # input5 <- prepare_wham_input(asap3,
+  # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  # #                              model_name=file_suffix2,
+  # #                              selectivity=list(model=c('double-logistic','age-specific'),
+  # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  # #                                                                 rep(1, asap3$dat$n_ages))), ## logistic survey
+  # #                              NAA_re = list(sigma="rec", cor="iid"))
   # # m5 <- fit_wham(input5, do.osa = F) # turn off OSA residuals to save time
   # # # exp(m1$par[grep('N1',names(m1$par))])
   # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
@@ -229,7 +230,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
   # # # res$best
   # #
-  mod_use <- m2
+
   save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
