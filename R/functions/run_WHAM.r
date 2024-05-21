@@ -148,10 +148,6 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     mod_use <- m6
   }
 
-
-
-  #
-  #
   # # input5 <- prepare_wham_input(asap3,
   # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
   # #                              model_name=file_suffix2,
