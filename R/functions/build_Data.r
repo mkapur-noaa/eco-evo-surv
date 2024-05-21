@@ -22,6 +22,7 @@ build_Data<-function(scenario,
                      fractional_coverage_use = 1, ## fractional coverage of survey
                      units = 'biomass', ## units for survey observations
                      units_scalar = 1,
+                     date.use = NULL, ## if you want to backfill an older folder
                      do_GAM = FALSE) ## whether or not to invoke spatial standardization
 {
 
@@ -40,7 +41,11 @@ build_Data<-function(scenario,
   ## Species-Scenario head folder
   head.dir <- here::here('outputs','wham_runs',paste(spname,scen, sep = '-')); if(!dir.exists(head.dir)) dir.create(head.dir)
   if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
-  wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
+  if(is.null(date.use)){
+    wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
+  } else{
+    wham.dir <- here::here(head.dir,date.use,paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
+  }
   total_area <- 632 ## total number of marine cells, aka dim (all_cells)
 
   ## load parameters for this species ----
@@ -208,9 +213,6 @@ build_Data<-function(scenario,
     write.csv(abundance,
               paste0(wham.dir,"/",file_suffix,"-abundance.csv"),
               row.names = FALSE)
-
-
-
 
     biomass0 <- ncvar_get(nc_open(biom_spatial_path),"biomass")
     biomass <- reshape2::melt(biomass0) %>%
