@@ -19,7 +19,10 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    'perfect_information',
                    paste0("fractional_coverage=", fractional_coverage_use))
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
-  if(exists(paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.csv"))) next()
+  if(file.exists(paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.csv"))){
+    cat(paste('already found outputs for ',file_suffix2,"\n"))
+    break()
+  }
   ## load input data ----
   mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
