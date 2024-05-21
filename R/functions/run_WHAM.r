@@ -230,7 +230,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
   # # # res$best
   # #
-
+  ## save MRE plots, csv ----
   save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
