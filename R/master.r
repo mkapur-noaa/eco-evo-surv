@@ -18,8 +18,8 @@ registerDoParallel(cl)
 ## one species, one replicate, one scenario, two fc scenarios = 2 mins
 ## three spp, one replicate, four scenarios  = 4 mins
 foreach(scenario=1:4) %:%
-  foreach(species = c(1)) %:%
-  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
+  # foreach(species = c(4,9)) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4]+1)) %:%
   foreach(repl=1:10)  %dopar%  {
 
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
@@ -27,19 +27,20 @@ foreach(scenario=1:4) %:%
     scen_use = scenario;
     sp_use = species;
     replicate_use = repl;
-    # for(fc_use in c(1,0.15,0.15001)){
-    for(fc_use in c(0.15001)){
+    for(fc_use in c(0.5,0.3)){#0.15,0.15001)){
+    # for(fc_use in c(1)){
       build_Data(scenario=scen_use,
                  sppIdx = sp_use,
                  repID = replicate_use,
                  yrs_use = 2010:2080, ## years to extract data for
-                 # srv_selex = ifelse(fc_use == 0.15001, 8, NA), ## age at 50% selex
-                 obs_error = ifelse(fc_use == 0.15001, 0.1, NA), ## observation error for surveys
                  fractional_coverage_use = fc_use, ## fractional coverage of survey
-                 srv_selex = NA, ## age at 50% selex
+                 srv_selex = ifelse(fc_use == 0.15001, 'mat', NA), ## how survey selex is specified
+                 obs_error = ifelse(fc_use == 0.15001, 0.1, NA), ## observation error for surveys
+                 # srv_selex = NA, ## age at 50% selex
                  # obs_error = NA, ## observation error for surveys
                  units = 'biomass',
                  units_scalar = 1,
+                 date.use = NULL,
                  do_GAM = FALSE)
     } ## end fractional coverage loop
 
@@ -52,8 +53,9 @@ stopImplicitCluster();stopCluster()
 # greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-16/rep',.)] %>%
+  .[grepl('2024-05-20/rep',.)] %>%
   .[grepl('Herring',.)] #%>%
+  # .[!grepl('Sprat',.)] #%>%
 
 # .[!grepl(greppy, .)]
 
@@ -61,14 +63,16 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run[31:40]) %dopar% {
-  invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
-  for(fc_use in c(1,0.15)){
+foreach(file_use = files_to_run[21:40]) %:%
+  foreach(fc_use=c(1,0.15))  %dopar%  {
+
+    invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
+    # for(fc_use in c(1,0.15)){
     run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
              fractional_coverage_use = fc_use, ## which survey setup to read from
              file_suffix = file_use)
-  }
-} ## end files loop
+    # }
+  } ## end dopar loop
 stopImplicitCluster();stopCluster()
 
 ## Summarize results across all species, scenarios, simulations ----
@@ -79,13 +83,16 @@ stopImplicitCluster();stopCluster()
 #   .[grepl('Herring',.)] %>%
 #   .[grepl('perfect_information',.)]
 
-
-mre_all <- list.files(files_to_run[1:16],
+mre_all0 <- list.files(files_to_run,
                       pattern = 'ssb_mre.csv',
                       recursive = TRUE,
                       full.names = TRUE) %>%
   lapply(., FUN = read.csv) %>%
-  bind_rows() %>%
+  bind_rows()
+
+
+
+mre_all <- mre_all0 %>%
   group_by(year,scenario, species, fc) %>%
   summarize(med=median(MRE_scaled),
             lwr50=quantile(MRE_scaled, .25),
@@ -94,25 +101,29 @@ mre_all <- list.files(files_to_run[1:16],
             upr95=quantile(MRE_scaled, .975))
 
 
+
+
+
 ggplot(mre_all, aes(x = year, y = med,
                     color = scenario, fill = scenario)) +
   geom_hline(yintercept = 0, color = 'grey50', linetype = 'dotted') +
   geom_line() +
   geom_ribbon(aes(ymin = lwr95, ymax = upr95),
               alpha = 0.15, color = NA) +
-  scale_y_continuous(limits = c(-100,100)) +
+  # scale_y_continuous(limits = c(-40,40), breaks = seq(-100,100,20)) +
   scale_fill_manual(values = scenPal, labels = scenLabs)+
   scale_color_manual(values = scenPal, labels = scenLabs)+
   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
-
   theme(legend.position = 'none')+
-  facet_grid(scenario+fc~species,labeller = as_labeller(sppLabs))
+  facet_grid(scenario~fc)
 
 
 ggsave(last_plot(),
-       file =here('figs',paste0(Sys.Date(),'-MRE_by_scenario-95ci-perfectinfo.png')),
+       file =here('figs',paste0(Sys.Date(),'-MRE_by_scenario-50ci.png')),
        width = 5, height = 5, unit = 'in', dpi = 400)
 
+
+write.csv(mre_all0, file = here('outputs','summary_data',paste0(Sys.Date(),'-mre_all.csv')), row.names = FALSE)
 
 #* 2060 map of biomass by spp ----
 tabund_spatial <- list.files(files_to_run,
@@ -216,7 +227,7 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
 
 #* survey time series by scenario ----
 for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
-  for(fc in c(1,0.15)){
+  for(fc in c(1,0.15,0.15001)){
 
     ## strip one species and coverage-specific replicate
     sobs <- list.files(files_to_run,
@@ -239,13 +250,13 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
 
     ggplot(sobs, aes(x = year,
                      y = med ,
-                     group= interaction(replicate, scenario),
+                     group= interaction(scenario),
                      fill = scenario,
                      color = scenario)) +
       geom_point() +
-      {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
-      {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
-      {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
+      {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1000,4000))} +
+      {if(species == 'AtlanticCod') scale_y_continuous(limits = c(0,1000))} +
+      {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(1500,8000))} +
       # geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
       #                   ymax =  abund_mean+abund_mean *abund_cv,
       #                   color = scenario ),
@@ -270,7 +281,39 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
 } ## end species
 
 # deprecated ----
-
+# mre_all %>%
+#   group_by(scenario,fc) %>%
+#   summarise(mam = median(abs(med))) %>%
+#   arrange(mam)
+# ggplot(mre_all0, aes(x = year, y = MRE_scaled,
+#                      group = interaction(replicate, scenario),
+#                      color = scenario, fill = scenario)) +
+#   geom_hline(yintercept = 0, color = 'grey50', linetype = 'dotted') +
+#   geom_line() +
+#   # geom_ribbon(aes(ymin = lwr50, ymax = upr50),
+#   #             alpha = 0.15, color = NA) +
+#   scale_y_continuous(limits = c(-35,35)) +
+#   scale_fill_manual(values = scenPal, labels = scenLabs)+
+#   scale_color_manual(values = scenPal, labels = scenLabs)+
+#   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
+#   theme(legend.position = 'none')+
+#   facet_grid(~fc)
+#
+#
+# mre_all1 <- mre_all0 %>%
+#   dplyr::select(year, replicate, scenario, fc, ssb_true, ssb_est) %>%
+#   reshape2::melt(id = c('year','replicate','scenario','fc'))
+#
+# ggplot(mre_all1, aes(x = year, y = value,
+#                      group = interaction(replicate,scenario, variable),
+#                      linetype = variable,
+#                      color = variable)) +
+#   geom_line() +
+#   # scale_fill_manual(values = scenPal, labels = scenLabs)+
+#   # scale_color_manual(values = scenPal, labels = scenLabs)+
+#   labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
+#   theme(legend.position = 'none')+
+#   facet_grid(scenario~fc)
 #* brute ----
 # for(scenario in 1){
 #   for(species in  c(sppLabs2$Var3[sppLabs2$Var4]+1)){
