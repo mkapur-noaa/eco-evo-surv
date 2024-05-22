@@ -147,7 +147,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
 
-  } if(fractional_coverage_use == 0.15001){
+  } else(fractional_coverage_use == 0.15001){
     input6 <- prepare_wham_input(asap3,
                                  recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                  model_name=file_suffix2,
