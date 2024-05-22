@@ -24,170 +24,175 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     break()
   }
   ## load input data ----
-  mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
-  maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
-  catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
-  survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-',fractional_coverage_use,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
-  # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
-  waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
-  waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
-  N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
-  true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_y.csv'))
-  # true_biomass_age <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_ysa.csv')) %>%
-  #   group_by(year, age) %>% summarise(value = sum(value)) %>% ungroup()
+  # mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
+  # maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
+  # catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
+  # survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-',fractional_coverage_use,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
+  # # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
+  # waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
+  # waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
+  # N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
+  # true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_y.csv'))
+  # # true_biomass_age <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_ysa.csv')) %>%
+  # #   group_by(year, age) %>% summarise(value = sum(value)) %>% ungroup()
+  # #
+  # # # ## load asap3-style data file ----
+  # # # # copy templated asap3 data file to working directory
+  # file.copy(from=file.path(here::here('osmose_wham_template.dat')),
+  #           to=wham.dir, overwrite=TRUE)
+  # # read asap3 data file and convert to input list for wham
+  # setwd(wham.dir)
+  # asap3 <- read_asap3_dat("osmose_wham_template.dat") ## uncorrected template
+  # #
+  # # ## populate asap3 data file ----
+  # # #* dimensions and spex ----
+  # asap3$dat$n_years <- nrow(maturity)
+  # asap3$dat$nfinalyear <- max(yrs_use)
+  # asap3$dat$year1 <- 2010
+  # asap3$dat$n_ages <- ncol(maturity)
+  # asap3$dat$n_fleets <- 1 ## one fishing fleet
+  # asap3$dat$n_fleet_sel_blocks  <- 1 ## one fishing fleet
+  # asap3$dat$n_indices <- 1 ## one survey fleet
+  # asap3$dat$n_WAA_mats <- 2 ## SSB and catch WAA
+  # asap3$dat$WAA_pointers <- c(1,2,1,2,2,2) #catch, discards, total catch, total discards, ssb, jan1bio
+  # asap3$dat$index_units <- 1 ## 1 = biomass, 2 = numbers
+  # asap3$dat$index_acomp_units <- 2
+  # asap3$dat$index_month <- 7
+  # asap3$dat$use_index_acomp <- 1
+  # asap3$dat$use_index <- 1
+  # #
+  # asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
+  # #
+  # # #* initial pars, phase, lambdas ----
+  # asap3$dat$N1_ini <- as.matrix(N_init, nrow = 1)
+  # asap3$dat$fracyr_spawn <- ifelse(spname=='AtlanticHerring',0.05,0.5)
+  # # # asap3$dat$lambda_steepness
+  # # # asap3$dat$phase_steepness <- 2
+  # # # asap3$dat$q_ini
+  # # # asap3$dat$lambda_q <- 0
+  # # # asap3$dat$phase_q <- 1
+  # # # asap3$dat$phase_N1_devs
+  # # # asap3$dat$lambda_N1_devs <- 1 ## estimate N1 devs(?)
+  # # # asap3$dat$phase_N1_devs
+  # # # asap3$dat$SR_scalar_ini
+  # # # asap3$dat$SR_scalar_type
+  # # ## asap3$dat$F1_ini
+  # #
+  # # #* data ----
+  # asap3$dat$maturity <- as.matrix(maturity)
+  # asap3$dat$M  <-  as.matrix(mortality)
+  # asap3$dat$WAA_mats[[1]] <- as.matrix(waa_catch)
+  # asap3$dat$WAA_mats[[2]] <- as.matrix(waa_ssb)
+  # asap3$dat$CAA_mats[[1]] <- as.matrix(catch_at_age)
+  # asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
+  # asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
+  # asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
+  # asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
+  # asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
   #
-  # # ## load asap3-style data file ----
-  # # # copy templated asap3 data file to working directory
-  file.copy(from=file.path(here::here('osmose_wham_template.dat')),
-            to=wham.dir, overwrite=TRUE)
-  # read asap3 data file and convert to input list for wham
-  setwd(wham.dir)
-  asap3 <- read_asap3_dat("osmose_wham_template.dat") ## uncorrected template
-  #
-  # ## populate asap3 data file ----
-  # #* dimensions and spex ----
-  asap3$dat$n_years <- nrow(maturity)
-  asap3$dat$nfinalyear <- max(yrs_use)
-  asap3$dat$year1 <- 2010
-  asap3$dat$n_ages <- ncol(maturity)
-  asap3$dat$n_fleets <- 1 ## one fishing fleet
-  asap3$dat$n_fleet_sel_blocks  <- 1 ## one fishing fleet
-  asap3$dat$n_indices <- 1 ## one survey fleet
-  asap3$dat$n_WAA_mats <- 2 ## SSB and catch WAA
-  asap3$dat$WAA_pointers <- c(1,2,1,2,2,2) #catch, discards, total catch, total discards, ssb, jan1bio
-  asap3$dat$index_units <- 1 ## 1 = biomass, 2 = numbers
-  asap3$dat$index_acomp_units <- 2
-  asap3$dat$index_month <- 7
-  asap3$dat$use_index_acomp <- 1
-  asap3$dat$use_index <- 1
-  #
-  asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
-  #
-  # #* initial pars, phase, lambdas ----
-  asap3$dat$N1_ini <- as.matrix(N_init, nrow = 1)
-  asap3$dat$fracyr_spawn <- 0.5
-  # # asap3$dat$lambda_steepness
-  # # asap3$dat$phase_steepness <- 2
-  # # asap3$dat$q_ini
-  # # asap3$dat$lambda_q <- 0
-  # # asap3$dat$phase_q <- 1
-  # # asap3$dat$phase_N1_devs
-  # # asap3$dat$lambda_N1_devs <- 1 ## estimate N1 devs(?)
-  # # asap3$dat$phase_N1_devs
-  # # asap3$dat$SR_scalar_ini
-  # # asap3$dat$SR_scalar_type
-  # ## asap3$dat$F1_ini
-  #
-  # #* data ----
-  asap3$dat$maturity <- as.matrix(maturity)
-  asap3$dat$M  <-  as.matrix(mortality)
-  asap3$dat$WAA_mats[[1]] <- as.matrix(waa_catch)
-  asap3$dat$WAA_mats[[2]] <- as.matrix(waa_ssb)
-  asap3$dat$CAA_mats[[1]] <- as.matrix(catch_at_age)
-  asap3$dat$DAA_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = ncol(catch_at_age))
-  asap3$dat$prop_rel_mats[[1]] <- matrix(0, nrow = asap3$dat$n_years, ncol = asap3$dat$n_ages)
-  asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
-  asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
-  asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
-
-  # # # #* selex ----
-  # # # #* no time blocks on selex, no random effects
-  # # # # input1 <- prepare_wham_input(asap3,
-  # # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-  # # # #                              model_name=file_suffix2,
-  # # # #                              selectivity=list(model=c('logistic','age-specific'),
-  # # # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # # # #                                               initial_pars=list(c(7,0.9), ## logistic fishery
-  # # # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
-  # # # #                                               fix_pars=list(NULL,
-  # # # #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
-  # # # #                              # selectivity=list(model=c('logistic','logistic'),
-  # # # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # # # #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-  # # # #                              #                                    c(7,0.9))), ## alpha, b1, survey
-  # # # #                              NAA_re = list(sigma="rec", cor="iid"))
-  # # # # m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
-  # # # # # exp(m1$par[grep('N1',names(m1$par))])
-  # # # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
-  # # # # check_convergence(m1)
-  # # #
-  if(fractional_coverage_use != 0.15001){
-    input2 <- prepare_wham_input(asap3,
-                                 recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-                                 model_name=file_suffix2,
-                                 selectivity=list(model=c('double-logistic','age-specific'),
-                                                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                  initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-                                                                    rep(1, asap3$dat$n_ages)), ## fully selected survey
-                                                  fix_pars=list(NULL,
-                                                                c(1:asap3$dat$n_ages))), ## fix 'em all
-                                 NAA_re = list(sigma="rec", cor="iid"))
-
-    # input2$data$fracyr_indices
-    # input2$data$fracyr_SSB
-    m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
-    check_convergence(m2)
-    mod_use <- m2
-  }
-
-  if(fractional_coverage_use == 0.15001){
-    input6 <- prepare_wham_input(asap3,
-                                 recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-                                 model_name=file_suffix2,
-                                 selectivity=list(model=c('double-logistic','logistic'),
-                                                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-                                                  initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-                                                                    c(7,0.9)), ## logistic survey (maturity curve)
-                                                  fix_pars=list(NULL,NULL)), ## fix 'em all
-                                 NAA_re = list(sigma="rec", cor="iid"))
-
-    # input2$data$fracyr_indices
-    # input2$data$fracyr_SSB
-    m6 <- fit_wham(input6, do.osa = F) # turn off OSA residuals to save time
-    check_convergence(m6)
-    mod_use <- m6
-  }
-
-  # # input5 <- prepare_wham_input(asap3,
+  # # # # #* selex ----
+  # # # # #* no time blocks on selex, no random effects
+  # # input1 <- prepare_wham_input(asap3,
   # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
   # #                              model_name=file_suffix2,
+  # #                              # selectivity=list(model=c('logistic','age-specific'),
+  # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # #                              #                  initial_pars=list(c(7,0.9), ## logistic fishery
+  # #                              #                                    rep(1, asap3$dat$n_ages)), ## fully selected survey
+  # #                              #                  fix_pars=list(NULL,
+  # #                              #                                c(1:asap3$dat$n_ages))), ## fix 'em all
   # #                              selectivity=list(model=c('double-logistic','age-specific'),
   # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-  # #                                                                 rep(1, asap3$dat$n_ages))), ## logistic survey
-  # #                              NAA_re = list(sigma="rec", cor="iid"))
-  # # m5 <- fit_wham(input5, do.osa = F) # turn off OSA residuals to save time
-  # # # exp(m1$par[grep('N1',names(m1$par))])
-  # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
-  # # check_convergence(m5)
-  #
-  # # input2a <- prepare_wham_input(asap3,
-  # #                              recruit_model=1, ## SCAA with random walk bc NAA_re specified
-  # #                              model_name=file_suffix2,
-  # #                              selectivity=list(model=c('double-logistic','age-specific'),
-  # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  # #                                               initial_pars=list(c(7,0.9), ## logistic fishery
   # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
-  # #                                               fix_pars=list(NULL,
-  # #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
+  # #                                               fix_pars=list(NULL,NULL)), ## fix 'em all
+  # #                              # selectivity=list(model=c('logistic','logistic'),
+  # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+  # #                              #                                    c(7,0.9))), ## alpha, b1, survey
   # #                              NAA_re = list(sigma="rec", cor="iid"))
-  # # m2a <- fit_wham(input2a, do.osa = F) # turn off OSA residuals to save time
-  # # check_convergence(m2a)
-  # #
-  # # asap3$dat$phase_steepness <- 2
-  # # input2b <- prepare_wham_input(asap3,
-  # #                               recruit_model=3, ## Beverton-Holt stock-recruitment with yearly recruitements as random effects
-  # #                               model_name=file_suffix2,
-  # #                               selectivity=list(model=c('double-logistic','age-specific'),
-  # #                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                                                initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
-  # #                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
-  # #                                                fix_pars=list(NULL,
-  # #                                                              c(1:asap3$dat$n_ages))), ## fix 'em all
-  # #                               NAA_re = list(sigma="rec", cor="iid"))
-  # # m2b <- fit_wham(input2b, do.osa = F) # turn off OSA residuals to save time
-  # # check_convergence(m2b)
+  # # m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
+  # # # # # # exp(m1$par[grep('N1',names(m1$par))])
+  # # # # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
+  # # # # # check_convergence(m1)
+  # # # #
+  # if(fractional_coverage_use != 0.15001){
+  #   input2 <- prepare_wham_input(asap3,
+  #                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                                model_name=file_suffix2,
+  #                                selectivity=list(model=c('double-logistic','age-specific'),
+  #                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                                 initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  #                                                                   rep(1, asap3$dat$n_ages)), ## fully selected survey
+  #                                                 fix_pars=list(NULL,
+  #                                                               c(1:asap3$dat$n_ages))), ## fix 'em all
+  #                                NAA_re = list(sigma="rec", cor="iid"))
   #
+  #   # input2$data$fracyr_indices
+  #   # input2$data$fracyr_SSB
+  #   m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
+  #   check_convergence(m2)
+  #   mod_use <- m2
+  # }
+  #
+  # if(fractional_coverage_use == 0.15001){
+  #   input6 <- prepare_wham_input(asap3,
+  #                                recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                                model_name=file_suffix2,
+  #                                selectivity=list(model=c('double-logistic','logistic'),
+  #                                                 re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                                 initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  #                                                                   c(7,0.9)), ## logistic survey (maturity curve)
+  #                                                 fix_pars=list(NULL,NULL)), ## fix 'em all
+  #                                NAA_re = list(sigma="rec", cor="iid"))
+  #
+  #   # input2$data$fracyr_indices
+  #   # input2$data$fracyr_SSB
+  #   m6 <- fit_wham(input6, do.osa = F) # turn off OSA residuals to save time
+  #   check_convergence(m6)
+  #   mod_use <- m6
+  # }
+  #
+  # # # input5 <- prepare_wham_input(asap3,
+  # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  # # #                              model_name=file_suffix2,
+  # # #                              selectivity=list(model=c('double-logistic','age-specific'),
+  # # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  # # #                                                                 rep(1, asap3$dat$n_ages))), ## logistic survey
+  # # #                              NAA_re = list(sigma="rec", cor="iid"))
+  # # # m5 <- fit_wham(input5, do.osa = F) # turn off OSA residuals to save time
+  # # # # exp(m1$par[grep('N1',names(m1$par))])
+  # # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
+  # # # check_convergence(m5)
+  # #
+  # # # input2a <- prepare_wham_input(asap3,
+  # # #                              recruit_model=1, ## SCAA with random walk bc NAA_re specified
+  # # #                              model_name=file_suffix2,
+  # # #                              selectivity=list(model=c('double-logistic','age-specific'),
+  # # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # #                                               initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  # # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  # # #                                               fix_pars=list(NULL,
+  # # #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
+  # # #                              NAA_re = list(sigma="rec", cor="iid"))
+  # # # m2a <- fit_wham(input2a, do.osa = F) # turn off OSA residuals to save time
+  # # # check_convergence(m2a)
+  # # #
+  # # # asap3$dat$phase_steepness <- 2
+  # # # input2b <- prepare_wham_input(asap3,
+  # # #                               recruit_model=3, ## Beverton-Holt stock-recruitment with yearly recruitements as random effects
+  # # #                               model_name=file_suffix2,
+  # # #                               selectivity=list(model=c('double-logistic','age-specific'),
+  # # #                                                re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # #                                                initial_pars=list(c(7,0.9,7,0.9), ## dome sel fishery
+  # # #                                                                  rep(1, asap3$dat$n_ages)), ## fully selected survey
+  # # #                                                fix_pars=list(NULL,
+  # # #                                                              c(1:asap3$dat$n_ages))), ## fix 'em all
+  # # #                               NAA_re = list(sigma="rec", cor="iid"))
+  # # # m2b <- fit_wham(input2b, do.osa = F) # turn off OSA residuals to save time
+  # # # check_convergence(m2b)
+  # #
   # input3 <- prepare_wham_input(asap3,
   #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
   #                              model_name=file_suffix2,
@@ -195,46 +200,91 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
   #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
   #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
-  #                                               fix_pars=list(NULL,   c(1:asap3$dat$n_ages))), ## fix 'em all
-  #                              # selectivity=list(model=c('logistic','logistic'),
-  #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-  #                              #                                    c(7,0.9))), ## alpha, b1, survey
+  #                                               fix_pars=list(NULL, NULL)), ## fix 'em all
   #                              NAA_re = list(sigma="rec", cor="iid"))
   # m3 <- fit_wham(input3, do.osa = F) # turn off OSA residuals to save time
   # check_convergence(m3)
-  # #
-  # # # input4 <- prepare_wham_input(asap3,
-  # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-  # # #                              model_name=file_suffix2,
-  # # #                              selectivity=list(model=c('age-specific','age-specific'),
-  # # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # # #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
-  # # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
-  # # #                                               fix_pars=list(NULL,
-  # # #                                                            NULL)),
-  # # #                              # selectivity=list(model=c('logistic','logistic'),
-  # # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # # #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-  # # #                              #                                    c(7,0.9))), ## alpha, b1, survey
-  # # #                              NAA_re = list(sigma="rec", cor="iid"))
-  # # # m4 <- fit_wham(input4, do.osa = F) # turn off OSA residuals to save time
-  # # # check_convergence(m4)
-  # #
-  # # # Save list of all fit models
-  # # # mods <- list(m2, m3)
-  # # # save("mods", file=  paste0(wham.dir,"/",file_suffix2,"-all_models.Rdata")
-  # #
-  # # # Compare models by AIC and Mohn's rho
-  # # # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
-  # # # res$best
-  # #
-  ## save MRE plots, csv ----
-  save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
-  # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
+  #
+  #
+  # input7 <- prepare_wham_input(asap3,
+  #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                              model_name=file_suffix2,
+  #                              selectivity=list(model=c('double-logistic','double-logistic'),
+  #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                               initial_pars=list(c(7,0.9,7,0.9), ## fully selected fishery
+  #                                                                 c(7,0.9,7,0.9)), ## fully selected survey
+  #                                               fix_pars=list(NULL, NULL)), ## fix 'em all
+  #                              NAA_re = list(sigma="rec", cor="iid"))
+  # m7 <- fit_wham(input7, do.osa = F) # turn off OSA residuals to save time
+  # check_convergence(m7)
+  #
+  # input8 <- prepare_wham_input(asap3,
+  #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                              model_name=file_suffix2,
+  #                              selectivity=list(model=c('double-logistic','age-specific'),
+  #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                               initial_pars=list(c(7,0.9,7,0.9), ## fully selected fishery
+  #                                                                 rep(0.5,asap3$dat$n_ages)), ## fully selected survey
+  #                                               fix_pars=list(NULL, NULL)), ## fix 'em all
+  #                              NAA_re = list(sigma="rec", cor="iid"))
+  # m8 <- fit_wham(input8, do.osa = F) # turn off OSA residuals to save time
+  # check_convergence(m8)
+  #
+  #
+  # input9 <- prepare_wham_input(asap3,
+  #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  #                              model_name=file_suffix2,
+  #                              selectivity=list(model=c('age-specific','age-specific'),
+  #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
+  #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  #                                               fix_pars=list(NULL,
+  #                                                             c(1:asap3$dat$n_ages))), ## fix 'em all
+  #                              NAA_re = list(sigma="rec", cor="iid"))
+  # m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
+  # check_convergence(m9)
+  # # #
+  # # # # input4 <- prepare_wham_input(asap3,
+  # # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  # # # #                              model_name=file_suffix2,
+  # # # #                              selectivity=list(model=c('age-specific','age-specific'),
+  # # # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # # #                                               initial_pars=list(rep(0.5, asap3$dat$n_ages), ## fully selected fishery
+  # # # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  # # # #                                               fix_pars=list(NULL,
+  # # # #                                                            NULL)),
+  # # # #                              # selectivity=list(model=c('logistic','logistic'),
+  # # # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # # #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+  # # # #                              #                                    c(7,0.9))), ## alpha, b1, survey
+  # # # #                              NAA_re = list(sigma="rec", cor="iid"))
+  # # # # m4 <- fit_wham(input4, do.osa = F) # turn off OSA residuals to save time
+  # # # # check_convergence(m4)
+  # # #
+  # # # # Save list of all fit models
+  # # # # mods <- list(m1,m2,m3,m7,m8,m9)
+  # # # # save("mods", file=  paste0(wham.dir,"/",file_suffix2,"-all_models.Rdata")
+  # # #
+  # # # # Compare models by AIC and Mohn's rho
+  # # # # res <- compare_wham_models(mods, table.opts=list(fname="ex1_table", sort=TRUE))
+  # # # # res$best
+  # # #
+  # ## save MRE plots, csv ----
+  # save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
+  load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
+
+
+  ## get q from the outputs
+    se = t(matrix(as.list(mod$sdrep, "Std. Error")$logit_q, nrow = NCOL(mod$rep$logit_q_mat),
+                       ncol = NROW(mod$rep$logit_q_mat)))
+    logit_q_lo = mod$rep$logit_q_mat - qnorm(0.975)*se
+    logit_q_hi = mod$rep$logit_q_mat + qnorm(0.975)*se
+    q = t(mod$input$data$q_lower + (mod$input$data$q_upper - mod$input$data$q_lower)/(1+exp(-t(mod$rep$logit_q_mat))))
+
+
 
   if(mod_use$is_sdrep){
     rpt <- mod_use$report()
@@ -243,7 +293,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
-      mutate(ssb_est = exp(std[ssb.ind, 1]) ,
+      mutate(ssb_est = exp(std[ssb.ind, 1])*(1+(1-mean(q))),
              ssb_ratio = ssb_est/ssb_true,
              totbio_est =   rpt$total_biomass,
              # depl_est = ssb_est/ssb0_est,
@@ -257,7 +307,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              # MRE_depl = (depl_est-depl_true)/depl_true,
              # MRE_scaled_depl = 100*MRE_depl,
              MRE0 = (ssb_est-ssb_true)/ssb_true,
-             MRE = (ssb_true -rpt$total_biomass_est)/ssb_true,
+             MRE = (ssb_true - ssb_est)/ssb_true,
              MRE_scaled = 100*MRE,
              fc = fractional_coverage_use)
   } else{
@@ -297,7 +347,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
     # scale_x_continuous(limits = c(2040,2099))+
-    scale_y_continuous(limits = c(-100,100)) +
+    scale_y_continuous(limits = c(-50,50)) +
     labs(x = 'Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
