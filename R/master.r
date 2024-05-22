@@ -54,8 +54,8 @@ stopImplicitCluster();stopCluster()
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
   .[grepl('2024-05-20/rep',.)] %>%
-  .[grepl('Cod',.)] %>%
-  .[grepl('noCC_Evo',.)] #%>%
+  .[grepl('Herring',.)] #%>%
+  # .[grepl('noCC_Evo',.)] #%>%
 
 # .[!grepl(greppy, .)]
 
@@ -100,16 +100,16 @@ mre_all <- mre_all0 %>%
             upr95=quantile(MRE_scaled, .975))
 
 mre_all$fc <- factor(mre_all$fc, levels = c(1,0.15))
-plist <- NULL
+for(spp in unique(mre_all$species)){
 for(fcc in unique(mre_all$fc)){
 
-  ggplot(subset(mre_all, fc == fcc), aes(x = year, y = med,
+  ggplot(subset(mre_all, fc == fcc & species == spp), aes(x = year, y = med,
                                          color = scenario, fill = scenario)) +
     geom_hline(yintercept = 0, color = 'grey50', linetype = 'dotted') +
     geom_line() +
     geom_ribbon(aes(ymin = lwr95, ymax = upr95),
                 alpha = 0.15, color = NA) +
-    scale_y_continuous(limits = c(-50,100), 50 = seq(-100,100,10)) +
+    scale_y_continuous(limits = c(-50,50), breaks = seq(-50,50,10)) +
     scale_fill_manual(values = scenPal, labels = scenLabs)+
     scale_color_manual(values = scenPal, labels = scenLabs)+
     labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
@@ -126,9 +126,10 @@ for(fcc in unique(mre_all$fc)){
   # dev.off()
 
   ggsave(last_plot(),
-         file =here('figs',paste0(Sys.Date(),'-',fcc,'-MRE_by_scenario-95ci.png')),
+         file =here('figs',paste0(Sys.Date(),'-',spp,'-',fcc,'-MRE_by_scenario-95ci.png')),
          width = 3, height = 4, unit = 'in', dpi = 400)
 
+}
 }
 write.csv(mre_all0, file = here('outputs','summary_data',paste0(Sys.Date(),'-mre_all.csv')), row.names = FALSE)
 
@@ -325,22 +326,23 @@ waa_index <- list.files(files_to_run,
             lwr95=quantile(weight_kg, .0275),
             upr95=quantile(weight_kg, .975))
 
-
-ggplot(subset(waa_index, age == 4), aes(x = year, y = med,
-                                        group= interaction(scenario),
-                                        fill = scenario,
-                                        color = scenario)) +
-  geom_line()+
-  geom_ribbon(aes(ymin = lwr50, ymax = upr50),
-              alpha = 0.2, color = NA) +
-  scale_fill_manual(values = scenPal, labels = scenLabs)+
-  scale_color_manual(values = scenPal, labels = scenLabs)+
-  theme(  strip.background = element_blank()  ,
-          legend.position = 'none' )+
-  labs(x = 'Year', y = 'EWAA @ ~50% maturity, kg', color = '', fill = '')
-ggsave(last_plot(),
-       file =here('figs',paste0('ewwa4_by_scenario_95ci-','atlanticherring','.png')),
-       width = 4, height = 4, unit = 'in', dpi = 400)
+for(spp in c(sppLabs2$Var2[sppLabs2$Var4])){
+  ggplot(subset(waa_index, age == 4 & year < 2081 & species == spp), aes(x = year, y = med,
+                                                                         group= interaction(scenario),
+                                                                         fill = scenario,
+                                                                         color = scenario)) +
+    geom_line()+
+    geom_ribbon(aes(ymin = lwr50, ymax = upr50),
+                alpha = 0.2, color = NA) +
+    scale_fill_manual(values = scenPal, labels = scenLabs)+
+    scale_color_manual(values = scenPal, labels = scenLabs)+
+    theme(  strip.background = element_blank()  ,
+            legend.position = 'none' )+
+    labs(x = 'Year', y = 'EWAA @ ~50% maturity, kg', color = '', fill = '')
+  ggsave(last_plot(),
+         file =here('figs',paste0('ewwa4_by_scenario_95ci-',spp,'.png')),
+         width = 4, height = 4, unit = 'in', dpi = 400)
+}
 
 #* input agecomps by secnario ----
 acomps_index <- list.files(files_to_run,
