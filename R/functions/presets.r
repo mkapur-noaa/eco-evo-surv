@@ -43,6 +43,10 @@ scenLabs <-  c('No Climate Change & No Evolution',
 names(scenLabs) <- c('noCC_noEvo','noCC_Evo','CC_noEvo','CC_Evo')
 
 
+fcLabs <- c('perfect information', '50% Coverage', '30% Coverage',
+            'Simple Survey','Simple Survey + Selex')
+names(fcLabs)  <- c(1,0.5,0.3,0.15,0.15001)
+
 
 sppLabs <-c("Atlantic Herring" , "Atlantic Mackerel" ,"Sandeel" ,"European Sprat","Norway Pout" ,
 "European Plaice","Common Sole","Saithe","Atlantic Cod","Haddock","Horse Mackerel" ,
