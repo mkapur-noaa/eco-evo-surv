@@ -67,6 +67,8 @@ sppLabs[sppLabs2$Var3%in%c(0,3,8)] <- sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,8)] #
 scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: reds have climate change, blues do not
 
 scenLabs2 <- data.frame(cbind(Var1 = scenLabs, Var2=names(scenLabs), Var3 = 1:4, Pal = rev(scenPal)))
+scenLabs2$Pal2 <- c('#1D6060','#1D6060', '#6A0000','#6A0000')
+
 sppPal <- gplots::rich.colors(n = 13)
 
 ## build survey arrays at many coverage types for lookup
