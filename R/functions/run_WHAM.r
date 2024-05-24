@@ -90,33 +90,33 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
   #
-  # # # # #* selex ----
-  # # # # #* no time blocks on selex, no random effects
-  # # input1 <- prepare_wham_input(asap3,
-  # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
-  # #                              model_name=file_suffix2,
-  # #                              # selectivity=list(model=c('logistic','age-specific'),
-  # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                              #                  initial_pars=list(c(7,0.9), ## logistic fishery
-  # #                              #                                    rep(1, asap3$dat$n_ages)), ## fully selected survey
-  # #                              #                  fix_pars=list(NULL,
-  # #                              #                                c(1:asap3$dat$n_ages))), ## fix 'em all
-  # #                              selectivity=list(model=c('double-logistic','age-specific'),
-  # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                                               initial_pars=list(c(7,0.9), ## logistic fishery
-  # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
-  # #                                               fix_pars=list(NULL,NULL)), ## fix 'em all
-  # #                              # selectivity=list(model=c('logistic','logistic'),
-  # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
-  # #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
-  # #                              #                                    c(7,0.9))), ## alpha, b1, survey
-  # #                              NAA_re = list(sigma="rec", cor="iid"))
-  # # m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
-  # # # # # # exp(m1$par[grep('N1',names(m1$par))])
-  # # # # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
-  # # # # # check_convergence(m1)
-  # # # #
-  if(fractional_coverage_use != 0.15001 & spname!='AtlanticHerring'){
+  # # # # # #* selex ----
+  # # # # # #* no time blocks on selex, no random effects
+  # # # input1 <- prepare_wham_input(asap3,
+  # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
+  # # #                              model_name=file_suffix2,
+  # # #                              # selectivity=list(model=c('logistic','age-specific'),
+  # # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # #                              #                  initial_pars=list(c(7,0.9), ## logistic fishery
+  # # #                              #                                    rep(1, asap3$dat$n_ages)), ## fully selected survey
+  # # #                              #                  fix_pars=list(NULL,
+  # # #                              #                                c(1:asap3$dat$n_ages))), ## fix 'em all
+  # # #                              selectivity=list(model=c('double-logistic','age-specific'),
+  # # #                                               re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # #                                               initial_pars=list(c(7,0.9), ## logistic fishery
+  # # #                                                                 rep(1, asap3$dat$n_ages)), ## fully selected survey
+  # # #                                               fix_pars=list(NULL,NULL)), ## fix 'em all
+  # # #                              # selectivity=list(model=c('logistic','logistic'),
+  # # #                              #                  re=rep("none",asap3$dat$n_fleet_sel_blocks + asap3$dat$n_indices),
+  # # #                              #                  initial_pars=list(c(7,0.9), ## age-specific start pars, fishery
+  # # #                              #                                    c(7,0.9))), ## alpha, b1, survey
+  # # #                              NAA_re = list(sigma="rec", cor="iid"))
+  # # # m1 <- fit_wham(input1, do.osa = F) # turn off OSA residuals to save time
+  # # # # # # # exp(m1$par[grep('N1',names(m1$par))])
+  # # # # # # # Check that m1 converged (m1$opt$convergence should be 0, and the maximum gradient should be < 1e-06)
+  # # # # # # check_convergence(m1)
+  # # # # #
+  if(fractional_coverage_use != 0.15001 & spname == 'AtlanticCod'){
     input2 <- prepare_wham_input(asap3,
                                  recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                  model_name=file_suffix2,
@@ -127,13 +127,14 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                   fix_pars=list(NULL,
                                                                 c(1:asap3$dat$n_ages))), ## fix 'em all
                                  NAA_re = list(sigma="rec", cor="iid"))
-
-    # input2$data$fracyr_indices
-    # input2$data$fracyr_SSB
+    #
+    #   # input2$data$fracyr_indices
+    #   # input2$data$fracyr_SSB
     m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
-    check_convergence(m2)
+    #   check_convergence(m2)
     mod_use <- m2
-  } else if(fractional_coverage_use != 0.15001 & spname=='AtlanticHerring'){
+  } else if(fractional_coverage_use != 0.15001 &
+            spname %in% c('EuropeanSprat','AtlanticHerring')){
     input9 <- prepare_wham_input(asap3,
                                  recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                  model_name=file_suffix2,
@@ -146,8 +147,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                  NAA_re = list(sigma="rec", cor="iid"))
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
-
-  } else(fractional_coverage_use == 0.15001){
+    mod_use <- m9
+  } else if (fractional_coverage_use == 0.15001){
     input6 <- prepare_wham_input(asap3,
                                  recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                  model_name=file_suffix2,
@@ -164,7 +165,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     check_convergence(m6)
     mod_use <- m6
   }
-  #
+  # #
   # # # input5 <- prepare_wham_input(asap3,
   # # #                              recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
   # # #                              model_name=file_suffix2,
@@ -282,43 +283,51 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # # res$best
   # # #
   # ## save MRE plots, csv ----
-  # save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
-  load(paste0(wham.dir.save,'_1/model.rdata')) ## loads as mod_use
+  save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
+  # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
 
 
-  ## get q from the outputs
-  se = t(matrix(as.list(mod_use$sdrep, "Std. Error")$logit_q, nrow = NCOL(mod_use$rep$logit_q_mat),
-                ncol = NROW(mod_use$rep$logit_q_mat)))
-  logit_q_lo = mod_use$rep$logit_q_mat - qnorm(0.975)*se
-  logit_q_hi = mod_use$rep$logit_q_mat + qnorm(0.975)*se
-  q = t(mod_use$input$data$q_lower + (mod_use$input$data$q_upper - mod_use$input$data$q_lower)/(1+exp(-t(mod_use$rep$logit_q_mat))))
 
   if(mod_use$is_sdrep){
+    ## get q from the outputs
+    se = t(matrix(as.list(mod_use$sdrep, "Std. Error")$logit_q, nrow = NCOL(mod_use$rep$logit_q_mat),
+                  ncol = NROW(mod_use$rep$logit_q_mat)))
+    logit_q_lo = mod_use$rep$logit_q_mat - qnorm(0.975)*se
+    logit_q_hi = mod_use$rep$logit_q_mat + qnorm(0.975)*se
+    q = mean(t(mod_use$input$data$q_lower + (mod_use$input$data$q_upper - mod_use$input$data$q_lower)/(1+exp(-t(mod_use$rep$logit_q_mat)))))
+
     rpt <- mod_use$report()
     rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
-      mutate(ssb_est = exp(std[ssb.ind, 1])*(1+(1-mean(q))),
+      mutate(ssb_est = exp(std[ssb.ind, 1]),
+             ssb_est_adj = exp(std[ssb.ind, 1])*(1+(1-mean(q))), ##herring
+             # ssb_est_adj = exp(std[ssb.ind, 1])*mean(q), ##sprat
              ssb_ratio = ssb_est/ssb_true,
              totbio_est =   rpt$total_biomass,
+             totbio_est_adj = totbio_est*(1+(1-q)), ## herring
+             totbio_est_adj =   totbio_est*q, ## herring
              # depl_est = ssb_est/ssb0_est,
              # depl_true = ssb_true/ssb0_true,
              # rel.ssb.vals= ssb_est/exp(std[SSB.t.ind, 1]),
              ssb_est_cv = std[ssb.ind, 2], ## maturity is fixed so cv holds for total
-             lower = totbio_est - totbio_est*ssb_est_cv,
-             upper = totbio_est + totbio_est*ssb_est_cv,
+             lower = totbio_est_adj - totbio_est_adj*ssb_est_cv,
+             upper = totbio_est_adj + totbio_est_adj*ssb_est_cv,
              # lower = ssb_est - ssb_est*ssb_est_cv,
              # upper = ssb_est + ssb_est*ssb_est_cv,
              # MRE_depl = (depl_est-depl_true)/depl_true,
              # MRE_scaled_depl = 100*MRE_depl,
-             MRE0 = (ssb_est-ssb_true)/ssb_true,
-             MRE = (ssb_true - ssb_est)/ssb_true,
-             MRE_scaled = 100*MRE,
+             MRE_ssb = (ssb_true-ssb_est)/ssb_true,
+             MRE_ssb_adj = (ssb_true - ssb_est_adj )/ssb_true,
+             MRE_totbio = (ssb_true - totbio_est)/ssb_true,
+             MRE_totbio_adj = (ssb_true - totbio_est_adj)/ssb_true, ## herring
+             MRE_totbio_adj = (total_biomass  - totbio_est_adj)/total_biomass , ## Sprat
+             MRE_scaled = 100*MRE_totbio_adj,
              fc = fractional_coverage_use)
   } else{
     ssb.ind <- mod_use$report()$SSB[1:length(mod_use$years)]
@@ -336,7 +345,9 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   cat(median(abs(mre_table$MRE_scaled)),"\n")
 
   ssb_compare <-  mre_table %>%
-    dplyr::select(year, ssb_true, totbio_est, lower, upper) %>%
+    # dplyr::select(year, ssb_true, totbio_est_adj, lower, upper) %>% ## cod & herring
+    dplyr::select(year, total_biomass, totbio_est_adj, lower, upper) %>% ## sprat
+
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
     geom_line() +
