@@ -53,9 +53,9 @@ stopImplicitCluster();stopCluster()
 # greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
 
 files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 3) %>%
-  .[grepl('2024-05-20/rep',.)] %>%
-  .[grepl('Herring',.)] #%>%
-  # .[grepl('noCC_Evo',.)] #%>%
+  .[grepl('2024-05-20/rep',.)] #%>%
+  # .[grepl('Sprat',.)] #%>%
+  # .[!grepl('\\bCC_Evo',.)] #%>%
 
 # .[!grepl(greppy, .)]
 
@@ -63,7 +63,7 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run[4:10]) %:%
+foreach(file_use = files_to_run[c(15,25)]) %:%
   foreach(fc_use=c(1,0.15))  %dopar%  {
     invisible(lapply(list.files(here::here('R','functions'), full.names = TRUE), FUN=source)) ## load all functions and presets
     run_WHAM(yrs_use = 2010:2080, ## years to run the assessment
@@ -87,8 +87,55 @@ mre_all0 <- list.files(files_to_run,
   lapply(., FUN = read.csv) %>%
   bind_rows()
 
+
+# mre_all_mod$scenario <- factor(mre_all_mod$scenario)
+
+mre_all_megsie0 <- mre_all0 %>%
+  dplyr::select(species, scenario, fc, replicate,
+                total_biomass,
+                total_biomass_cv, year, MRE, MRE_scaled) %>%
+  mutate(fc = as.factor(fc)) %>%
+  dplyr::filter(fc %in% c("1","0.15"))
+
+
+mre_all_megsie1 <- merge(mre_all_megsie0,sppLabs2[,c('Var2','Var5')],
+                     by.x = 'species',
+                     by.y = 'Var2')
+names(mre_all_megsie1)[names(mre_all_megsie1)=='Var5'] <- 'trophic'
+
+sobs_cv <- list.files(files_to_run,
+                      pattern = paste0('-survey_obs_biomass.csv'),
+                      recursive = TRUE,
+                      full.names = TRUE) %>%
+  lapply(., FUN = read.csv) %>%
+  bind_rows() %>%
+  mutate(fc = as.factor(fc)) %>%
+  dplyr::filter(fc %in% c("1","0.15")) %>%
+  mutate(abund_mean = abund_mean/1000) %>%
+  dplyr::select(fc, year, replicate, species, scenario, abund_cv)
+
+## merge dfs, collapses replicate
+mre_all_megsie <- merge(mre_all_megsie1,
+                        sobs_cv,
+                        by = c('year','replicate','fc','scenario','species'),
+                        all.x=TRUE)
+
+View(subset(mre_all_megsie, is.na(abund_cv)))
+
+write.csv(mre_all_megsie, file = here::here('outputs','summary_data','mre_for_megsie-2024-05-24.csv'),row.names = FALSE)
+# mre_all_megsie$trophic <- mre_all_megsie$Var5
+# mre_all_mod$species <- factor(mre_all_mod$species, levels = sppLabs2$Var5[sppLabs2$Var4])
+# mre_all_mod$replicate <- factor(mre_all_mod$replicate)
+# mre_all_mod$climate_change <- factor(grepl('\\bCC',mre_all_mod$scenario))
+# mre_all_mod$evolution <- factor(grepl('_Evo',mre_all_mod$scenario))
+
+
+
 ## check how many ran
 summarise(mre_all0, nrep = n()/71, .by = c(scenario, species, fc))
+
+summarise(mre_all0, nrep = n()/71, .by = c(scenario, replicate,species)) %>%
+  filter(nrep ==1)
 
 mre_all <- mre_all0 %>%
   filter(fc!=0.15001) %>%
@@ -101,36 +148,39 @@ mre_all <- mre_all0 %>%
 
 mre_all$fc <- factor(mre_all$fc, levels = c(1,0.15))
 for(spp in unique(mre_all$species)){
-for(fcc in unique(mre_all$fc)){
+  # for(fcc in unique(mre_all$fc)){
+    # ggplot(mre_all,
+    ggplot(subset(mre_all,  species == spp ),
+           aes(x = year, y = med,color = scenario, fill = scenario)) +
+      geom_hline(yintercept = 0, color = 'grey50', linetype = 'dotted') +
+      geom_line() +
+      geom_ribbon(aes(ymin = lwr95, ymax = upr95),
+                  alpha = 0.15, color = NA) +
+      scale_y_continuous(limits = c(-60,30), breaks = seq(-50,50,10)) +
+      scale_fill_manual(values = scenPal, labels = scenLabs)+
+      scale_color_manual(values = scenPal, labels = scenLabs)+
+      labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
+    facet_wrap(~fc, labeller = as_labeller(fcLabs), ncol = 1)+
+      theme(legend.position = 'none',
+            strip.text.x = element_blank(),
+            axis.title=element_blank())
 
-  ggplot(subset(mre_all, fc == fcc & species == spp), aes(x = year, y = med,
-                                         color = scenario, fill = scenario)) +
-    geom_hline(yintercept = 0, color = 'grey50', linetype = 'dotted') +
-    geom_line() +
-    geom_ribbon(aes(ymin = lwr95, ymax = upr95),
-                alpha = 0.15, color = NA) +
-    scale_y_continuous(limits = c(-50,50), breaks = seq(-50,50,10)) +
-    scale_fill_manual(values = scenPal, labels = scenLabs)+
-    scale_color_manual(values = scenPal, labels = scenLabs)+
-    labs(x = 'Year', y = 'MRE SSB, %', color = '', fill = '')+
-    theme(legend.position = 'none')+
-    facet_grid(~fc, labeller = as_labeller(fcLabs))
 
-  # ggsave(  Rmisc::multiplot(plotlist = list(plist[[1]],plist[[2]]), cols = 2),
-  #        file =here('figs',paste0(Sys.Date(),'-',fcc,'-MRE_by_scenario-95ci.png')),
-  #        width = 3, height = 4, unit = 'in', dpi = 400)
+    # ggsave(  Rmisc::multiplot(plotlist = list(plist[[1]],plist[[2]]), cols = 2),
+    #        file =here('figs',paste0(Sys.Date(),'-',fcc,'-MRE_by_scenario-95ci.png')),
+    #        width = 3, height = 4, unit = 'in', dpi = 400)
 
-  # png(here('figs',paste0(Sys.Date(),'-',fcc,'-MRE_by_scenario-95ci.png')),
-  #     width = 5, height = 3, unit = 'in', res = 400)
-  # Rmisc::multiplot(plotlist = list(plist[[1]],plist[[2]]), cols = 2)
-  # dev.off()
+    # png(here('figs',paste0(Sys.Date(),'-',fcc,'-MRE_by_scenario-95ci.png')),
+    #     width = 5, height = 3, unit = 'in', res = 400)
+    # Rmisc::multiplot(plotlist = list(plist[[1]],plist[[2]]), cols = 2)
+    # dev.off()
 
-  ggsave(last_plot(),
-         file =here('figs',paste0(Sys.Date(),'-',spp,'-',fcc,'-MRE_by_scenario-95ci.png')),
-         width = 3, height = 4, unit = 'in', dpi = 400)
+    ggsave(last_plot(),
+           file =here('figs',paste0(Sys.Date(),'-',spp,'-MRE_by_scenario-95ci.png')),
+           width = 4, height = 6, unit = 'in', dpi = 400)
 
-}
-}
+  }
+# }
 write.csv(mre_all0, file = here('outputs','summary_data',paste0(Sys.Date(),'-mre_all.csv')), row.names = FALSE)
 
 #* 2060 map of biomass by spp ----
@@ -142,10 +192,12 @@ tabund_spatial <- list.files(files_to_run,
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
   mutate(abundance_rescale_year =  rescale(tot_val, to=c(0,1), na.rm = T),
-         .by = c(year, species))
+         .by = c(scenario, species))
 
-maplist = list()
-for(spp in c(sppLabs2$Var2[sppLabs2$Var4])[1]){
+# tabund_spatial$scenario <- factor(tabund_spatial$scenario,
+#                                   levels = scenLabs2$Var2[])
+for(spp in c(sppLabs2$Var2[sppLabs2$Var4])){
+  maplist = list()
   for(s in 1:4){
 
     maplist[[s]] <- tabund_spatial %>%
@@ -159,8 +211,9 @@ for(spp in c(sppLabs2$Var2[sppLabs2$Var4])[1]){
       # scale_fill_viridis_c(na.value = NA)+
       scale_fill_gradient2(low = "#FFF5D1",
                            mid = "#efeee7",
-                           # mid = scenLabs2$Pal[s],
-                           high = 'black')+
+                           high = scenLabs2$Pal2[s],
+                           # high = 'black'
+                           )+
       # high = scenLabs2$Pal[s])+
       theme(
         strip.text.y = element_text(angle = 90),
@@ -172,7 +225,11 @@ for(spp in c(sppLabs2$Var2[sppLabs2$Var4])[1]){
         panel.grid.minor = element_blank(),
         legend.position =  'none')+
       facet_grid( scenario~year)
-
+    png(here('figs',paste0(Sys.Date(),'-biomass_maps_by_scenario_timestep-',spp,'.png')),
+        width = 4, height = 6, unit = 'in', res = 400)
+    Rmisc::multiplot(plotlist = maplist, cols = 1)
+    dev.off()
+    #
     # ggsave(p,
     #        file =here('figs',paste0('biomass_maps_by_scenario_timestep-',
     #                                 scenLabs2$Var2[s],"-",
@@ -184,16 +241,12 @@ for(spp in c(sppLabs2$Var2[sppLabs2$Var4])[1]){
   }
 } ## end scenario
 
-png(here('figs','biomass_maps_by_scenario_timestep-aherring.png'),
-    width = 4, height = 6, unit = 'in', res = 400)
-Rmisc::multiplot(plotlist = maplist, cols = 1)
-dev.off()
-#
 
-Rmisc::multiplot(plotlist = maplist, cols = 1)
-ggsave(,
-       file =here('figs',paste0('biomass_maps_by_scenario_2060-',species,'.png')),
-       width = 3, height = 10, unit = 'in', dpi = 400)
+
+# Rmisc::multiplot(plotlist = maplist, cols = 1)
+# ggsave(,
+#        file =here('figs',paste0('biomass_maps_by_scenario_2060-',species,'.png')),
+#        width = 3, height = 10, unit = 'in', dpi = 400)
 
 # } ## end species
 
@@ -227,9 +280,9 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
                 alpha = 0.2, color = NA) +
     scale_fill_manual(values = scenPal, labels = scenLabs)+
     scale_color_manual(values = scenPal, labels = scenLabs)+
-    {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
-    {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
-    {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
+    # {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1500,4000))} +
+    # {if(species == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
+    # {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))} +
     facet_wrap(~species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
     labs(x = 'Year', y = 'True SSB (kmt)', color = '', fill = '') +
     theme(legend.position = 'none')
@@ -237,10 +290,15 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
 
   ggsave(last_plot(),
          file =here('figs',paste0('biomass_by_scenario-95ci-',species,'.png')),
-         width = 3, height = 4, unit = 'in', dpi = 400)
+         width = 3, height = 3, unit = 'in', dpi = 400)
 } ## end species
 
 #* survey time series by scenario ----
+
+## summarize cv trends
+
+
+
 for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
   for(fc in c(1,0.15,0.15001)){
 
@@ -256,6 +314,7 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
       # filter(replicate == 0) %>%
       group_by(year,scenario, species) %>%
       summarize(med=median(abund_mean  ),
+                cv_median = median(abund_cv ),
                 lwr50=quantile(abund_mean  , .25),
                 upr50=quantile(abund_mean  , .75),
                 lwr95=quantile(abund_mean  , .0275),
@@ -269,9 +328,9 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
                      fill = scenario,
                      color = scenario)) +
       geom_point() +
-      {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1000,4000))} +
-      {if(species == 'AtlanticCod') scale_y_continuous(limits = c(0,1000))} +
-      {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(1500,8000))} +
+      # {if(species == 'AtlanticHerring') scale_y_continuous(limits = c(1000,4000))} +
+      # {if(species == 'AtlanticCod') scale_y_continuous(limits = c(0,1000))} +
+      # {if(species == 'EuropeanSprat') scale_y_continuous(limits = c(1500,8000))} +
       # geom_errorbar(aes(ymin = abund_mean-abund_mean*abund_cv,
       #                   ymax =  abund_mean+abund_mean *abund_cv,
       #                   color = scenario ),
@@ -291,7 +350,7 @@ for(species in c(sppLabs2$Var2[sppLabs2$Var4])){
 
     ggsave(last_plot(),
            file =here('figs',paste0('survobs_by_scenario_95ci-',species,'-',fc,'.png')),
-           width = 3, height = 4, unit = 'in', dpi = 400)
+           width = 3, height = 3, unit = 'in', dpi = 400)
   } ## end fractional coverage
 } ## end species
 
@@ -340,8 +399,8 @@ for(spp in c(sppLabs2$Var2[sppLabs2$Var4])){
             legend.position = 'none' )+
     labs(x = 'Year', y = 'EWAA @ ~50% maturity, kg', color = '', fill = '')
   ggsave(last_plot(),
-         file =here('figs',paste0('ewwa4_by_scenario_95ci-',spp,'.png')),
-         width = 4, height = 4, unit = 'in', dpi = 400)
+         file =here('figs',paste0('ewaa4_by_scenario_95ci-',spp,'.png')),
+         width = 3, height = 4, unit = 'in', dpi = 400)
 }
 
 #* input agecomps by secnario ----
