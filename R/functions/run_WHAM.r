@@ -127,12 +127,13 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                   fix_pars=list(NULL,
                                                                 c(1:asap3$dat$n_ages))), ## fix 'em all
                                  NAA_re = list(sigma="rec", cor="iid"))
-    #
-    #   # input2$data$fracyr_indices
-    #   # input2$data$fracyr_SSB
+    input2$map$logit_q <- factor(NA) ## ensure q is fixed
     m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
     #   check_convergence(m2)
-    mod_use <- m2
+    mod_use$opt$par
+    q_f <- function(x,a=0,b=1000) a+(b-a)/(1+exp(-x))
+    q_f(x = mod_use$opt$par['logit_q']) ## confirm used q is 1
+    mod_use <- m2; input_use <- input2
   } else if(fractional_coverage_use != 0.15001 &
             spname %in% c('EuropeanSprat','AtlanticHerring')){
     input9 <- prepare_wham_input(asap3,
@@ -145,10 +146,17 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                   fix_pars=list(NULL,
                                                                 c(1:asap3$dat$n_ages))), ## fix survey
                                  NAA_re = list(sigma="rec", cor="iid"))
+    input9$map$logit_q <- factor(NA) ## ensure q is fixed
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
-    mod_use <- m9
+    mod_use <- m9; input_use <- input9
+    mod_use$env$last.par.best
   } else if (fractional_coverage_use == 0.15001){
+    # q_f <- function(x,a=0,b=1000) a+(b-a)/(1+exp(-x)) ## input X will vary with bounds
+    # q(y,ind) = q_lower(ind) + (q_upper(ind) - q_lower(ind))/(1 + exp(-logit_q_mat(y,ind)));
+    ## modify catchability here, ensure it is fixed
+    ## $parList return last.par.best, confirm they match
+    ## mod_use$opt$par has final values
     input6 <- prepare_wham_input(asap3,
                                  recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
                                  model_name=file_suffix2,
@@ -163,7 +171,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     # input2$data$fracyr_SSB
     m6 <- fit_wham(input6, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m6)
-    mod_use <- m6
+    mod_use <- m6; input_use <- input6
   }
   # #
   # # # input5 <- prepare_wham_input(asap3,
@@ -283,6 +291,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # # res$best
   # # #
   # ## save MRE plots, csv ----
+  save(input_use, file = paste0(wham.dir.save,'/wham_input.rdata'))
   save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
   # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
