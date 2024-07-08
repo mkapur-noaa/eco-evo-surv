@@ -473,6 +473,7 @@ build_Data<-function(scenario,
     ## WAA matrices ----
     #*   population WAA ----
     ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
+    ## we take this at midyear to match asap3$dat$fracyr_spawn, the fraction of year elapsed before SSB calculation
     waa <- read.csv(header = T, skip = 1,
                     list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
                                recursive = T, full.names = TRUE)[repID]) %>%
