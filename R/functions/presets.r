@@ -58,9 +58,9 @@ sppLabs2 <- data.frame(Var1 = sppLabs,
                   Var2=names(sppLabs),
                   Var3 = 0:(length(sppLabs)-1),
                   Var4 = FALSE)
-sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,8)] <- c('MidForage','BaseForage','Gadid') ## mask names for spp
-sppLabs2$Var4[sppLabs2$Var3%in%c(0,3,8)] <- TRUE ## indicate spp of interest
-sppLabs[sppLabs2$Var3%in%c(0,3,8)] <- sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,8)] ## mask names for spp
+sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,7,8)] <- c('MidForage','BaseForage','Predator1','Predator2') ## mask names for spp
+sppLabs2$Var4[sppLabs2$Var3%in%c(0,3,7,8)] <- TRUE ## indicate spp of interest
+sppLabs[sppLabs2$Var3%in%c(0,3,7,8)] <- sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,7,8)] ## mask names for spp
 
 
 ## color palettes ----
