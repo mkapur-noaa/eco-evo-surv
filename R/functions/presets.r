@@ -71,6 +71,15 @@ scenLabs2$Pal2 <- c('#1D6060','#1D6060', '#6A0000','#6A0000')
 
 sppPal <- gplots::rich.colors(n = 13)
 
+## function from Cole to calculate actual q used given bounds (logit)
+q_f <- function(x,a=0,b=1000) a+(b-a)/(1+exp(-x))
+## get q from the outputs (from wham plotting code; equivalent to above)
+# se = t(matrix(as.list(mod_use$sdrep, "Std. Error")$logit_q, nrow = NCOL(mod_use$rep$logit_q_mat),
+#               ncol = NROW(mod_use$rep$logit_q_mat)))
+# logit_q_lo = mod_use$rep$logit_q_mat - qnorm(0.975)*se
+# logit_q_hi = mod_use$rep$logit_q_mat + qnorm(0.975)*se
+# q = mean(t(mod_use$input$data$q_lower + (mod_use$input$data$q_upper - mod_use$input$data$q_lower)/(1+exp(-t(mod_use$rep$logit_q_mat)))))
+
 ## build survey arrays at many coverage types for lookup
 ## this ensures that for a given coverage fraction, the exact same design
 ## is used for every species, scenario, and replicate
