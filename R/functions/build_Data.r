@@ -474,12 +474,18 @@ build_Data<-function(scenario,
     #*   population WAA ----
     ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
     ## we take this at midyear to match asap3$dat$fracyr_spawn, the fraction of year elapsed before SSB calculation
+
     waa <- read.csv(header = T, skip = 1,
                     list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
                                recursive = T, full.names = TRUE)[repID]) %>%
       reshape2::melt(id = c('Time','Age')) %>%
       filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
       mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
+      mutate(rescaled_time =  scales::rescale(Time, to=c(0,1), na.rm = TRUE),   ## start to end year
+             compressed_time = cut(rescaled_time, breaks = 26, labels = FALSE), ## ensure same 26 breaks each year
+             .by = c(year)) %>%
+      mutate(avg_rescaled_time = mean(rescaled_time), .by = compressed_time) %>% ## account for some rounding issues
+      filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## filter to spawntime
       group_by(year,Age) %>%
       summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
       ungroup() %>%
@@ -505,6 +511,31 @@ build_Data<-function(scenario,
     #*   Only have biomass-at-age, total numbers, and mean size.
     #*   Avoid using population NAA and monkeying with selex.
     #*   FOR NOW, assume that the catch WAA matches the population
+
+
+    waa <- read.csv(header = T, skip = 1,
+                    list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
+                               recursive = T, full.names = TRUE)[repID]) %>%
+      reshape2::melt(id = c('Time','Age')) %>%
+      filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
+      mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
+      # mutate(rescaled_time =  scales::rescale(Time, to=c(0,1), na.rm = TRUE),   ## start to end year
+      #        compressed_time = cut(rescaled_time, breaks = 26, labels = FALSE), ## ensure same 26 breaks each year
+      #        .by = c(year)) %>%
+      # mutate(avg_rescaled_time = mean(rescaled_time), .by = compressed_time) %>% ## account for some rounding issues
+      # filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## filter to spawntime
+      group_by(year,Age) %>%
+      summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
+      ungroup() %>%
+      mutate(mean_weight_kg  = round(lw_pars$condition*mean_size_cm^lw_pars$allometric/1000,3)) %>% ## average weight at age across year
+      mutate(asymp_weight_kg = max(mean_weight_kg),.by = 'year') %>%
+      dplyr::select(-mean_size_cm)  %>%
+      tidyr::complete(year = 2010:2099, Age = 1:max_age_pop) %>%
+      group_by(year) %>%
+      tidyr::fill(mean_weight_kg , .direction = "down")  %>%
+      ungroup() %>%
+      tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
+      dplyr::select(-year)
     write.table(waa,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
