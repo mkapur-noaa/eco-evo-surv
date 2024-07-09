@@ -89,7 +89,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
   asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
-  save(asap3, file =  paste0(wham.dir.save,'/asap3.rdata'))
+  save(asap3, file =  paste0(wham.dir.save,"/",Sys.Date(),"-asap3.rdata"))
 
   # # # # # #* selex ----
   # # # # # #* no time blocks on selex, no random effects
