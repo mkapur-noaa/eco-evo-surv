@@ -19,7 +19,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    'perfect_information',
                    paste0("fractional_coverage=", fractional_coverage_use))
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
-  if(file.exists(paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.csv"))){
+  if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-ssb_mre.csv"))){
     cat(paste('already found outputs for ',file_suffix2,"\n"))
     break()
   }
@@ -30,7 +30,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-',fractional_coverage_use,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
   # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
-  waa_ssb <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
+  waa_ssb <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
   N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
   true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_y.csv'))
   # true_biomass_age <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_ysa.csv')) %>%
@@ -64,7 +64,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
   #
   # #* initial pars, phase, lambdas ----
-  asap3$dat$N1_ini <- as.matrix(N_init, nrow = 1)
+  asap3$dat$N1_ini <- 0.5*as.matrix(N_init, nrow = 1)
   # asap3$dat$fracyr_spawn <- ifelse(spname=='AtlanticHerring',0.05,0.5)
   # # asap3$dat$lambda_steepness
   # # asap3$dat$phase_steepness <- 2
@@ -89,7 +89,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$IAA_mats[[1]] <- as.matrix(survey)
   asap3$dat$catch_cv <- matrix(0.01,asap3$dat$n_years )
   asap3$dat$catch_Neff <- matrix(100, nrow = asap3$dat$n_years)
-  #
+  save(asap3, file =  paste0(wham.dir.save,'/asap3.rdata'))
+
   # # # # # #* selex ----
   # # # # # #* no time blocks on selex, no random effects
   # # # input1 <- prepare_wham_input(asap3,
@@ -129,10 +130,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                  NAA_re = list(sigma="rec", cor="iid"))
     input2$map$logit_q <- factor(NA) ## ensure q is fixed
     m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
-    #   check_convergence(m2)
-    mod_use$opt$par
-    q_f <- function(x,a=0,b=1000) a+(b-a)/(1+exp(-x))
-    q_f(x = mod_use$opt$par['logit_q']) ## confirm used q is 1
+    check_convergence(m2)
+
     mod_use <- m2; input_use <- input2
   } else if(fractional_coverage_use != 0.15001 &
             spname %in% c('EuropeanSprat','AtlanticHerring')){
@@ -145,10 +144,18 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                                     rep(1, asap3$dat$n_ages)), ## fully selected survey
                                                   fix_pars=list(NULL,
                                                                 c(1:asap3$dat$n_ages))), ## fix survey
-                                 NAA_re = list(sigma="rec", cor="iid"))
-    input9$map$logit_q <- factor(NA) ## ensure q is fixed
+                                 NAA_re = list(sigma="rec", cor="iid"## ranef recdevs, uncorrelated
+                                              )
+                                 # NAA_re = NULL
+                                 )
+
+    input9$data$N1_model  ## 0 = fixed effects (NAA vector, default), 1 = initR and equilF
+    input9$par$log_N1_pars ## will be vector OR two pars depending on N1_model
+    # an initial recruitment and an instantaneous fishing mortality rate
+    input9$par$logit_q; input9$map$logit_q <- factor(NA) ## ensure q is fixed
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
+    # input9$map
     mod_use <- m9; input_use <- input9
     mod_use$env$last.par.best
   } else if (fractional_coverage_use == 0.15001){
@@ -291,23 +298,14 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # # # # res$best
   # # #
   # ## save MRE plots, csv ----
-  save(input_use, file = paste0(wham.dir.save,'/wham_input.rdata'))
-  save(mod_use, file = paste0(wham.dir.save,'/model.rdata'))
+  save(input_use, file = paste0(wham.dir.save,"/",Sys.Date(),'_wham_input.rdata'))
+  save(mod_use, file = paste0(wham.dir.save,"/",Sys.Date(),'_model.rdata'))
   # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
   # Project best model, m4,
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
-
-
-
   if(mod_use$is_sdrep){
-    ## get q from the outputs
-    se = t(matrix(as.list(mod_use$sdrep, "Std. Error")$logit_q, nrow = NCOL(mod_use$rep$logit_q_mat),
-                  ncol = NROW(mod_use$rep$logit_q_mat)))
-    logit_q_lo = mod_use$rep$logit_q_mat - qnorm(0.975)*se
-    logit_q_hi = mod_use$rep$logit_q_mat + qnorm(0.975)*se
-    q = mean(t(mod_use$input$data$q_lower + (mod_use$input$data$q_upper - mod_use$input$data$q_lower)/(1+exp(-t(mod_use$rep$logit_q_mat)))))
-
+    q <- ifelse(is.na(q_f(x = mod_use$opt$par['logit_q'])),1,  q_f(x = mod_use$opt$par['logit_q']))
     rpt <- mod_use$report()
     rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
@@ -315,28 +313,30 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = exp(std[ssb.ind, 1]),
-             ssb_est_adj = exp(std[ssb.ind, 1])*(1+(1-mean(q))), ##herring
+             q_est = q,
+             # ssb_est_adj = exp(std[ssb.ind, 1])*(1+(1-mean(q))), ##herring
              # ssb_est_adj = exp(std[ssb.ind, 1])*mean(q), ##sprat
-             ssb_ratio = ssb_est/ssb_true,
+             # ssb_ratio = ssb_est/ssb_true,
              totbio_est =   rpt$total_biomass,
-             totbio_est_adj = totbio_est*(1+(1-q)), ## herring
-             totbio_est_adj =   totbio_est*q, ## herring
+             # totbio_est_adj = totbio_est*(1+(1-q)), ## herring
+             # totbio_est_adj =   totbio_est*q, ## sprat
              # depl_est = ssb_est/ssb0_est,
              # depl_true = ssb_true/ssb0_true,
              # rel.ssb.vals= ssb_est/exp(std[SSB.t.ind, 1]),
              ssb_est_cv = std[ssb.ind, 2], ## maturity is fixed so cv holds for total
-             lower = totbio_est_adj - totbio_est_adj*ssb_est_cv,
-             upper = totbio_est_adj + totbio_est_adj*ssb_est_cv,
+             lower = totbio_est - totbio_est*ssb_est_cv,
+             upper = totbio_est + totbio_est*ssb_est_cv,
              # lower = ssb_est - ssb_est*ssb_est_cv,
              # upper = ssb_est + ssb_est*ssb_est_cv,
              # MRE_depl = (depl_est-depl_true)/depl_true,
              # MRE_scaled_depl = 100*MRE_depl,
              MRE_ssb = (ssb_true-ssb_est)/ssb_true,
-             MRE_ssb_adj = (ssb_true - ssb_est_adj )/ssb_true,
-             MRE_totbio = (ssb_true - totbio_est)/ssb_true,
-             MRE_totbio_adj = (ssb_true - totbio_est_adj)/ssb_true, ## herring
-             MRE_totbio_adj = (total_biomass  - totbio_est_adj)/total_biomass , ## Sprat
-             MRE_scaled = 100*MRE_totbio_adj,
+             # MRE_ssb_adj = (ssb_true - ssb_est_adj )/ssb_true,
+             # MRE_totbio = (ssb_true - totbio_est)/ssb_true,
+             MRE_totbio = (total_biomass - totbio_est)/total_biomass,
+             # MRE_totbio_adj = (ssb_true - totbio_est_adj)/ssb_true, ## herring
+             # MRE_totbio_adj = (total_biomass  - totbio_est_adj)/total_biomass , ## Sprat
+             MRE_scaled = 100*MRE_totbio,
              fc = fractional_coverage_use)
   } else{
     ssb.ind <- mod_use$report()$SSB[1:length(mod_use$years)]
@@ -352,10 +352,15 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
 
   # cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
   cat(median(abs(mre_table$MRE_scaled)),"\n")
-
+  # View(mre_table %>%
+  #        dplyr::select(year, ssb_true,ssb_est,ssb_est_adj,
+  #                                  total_biomass, totbio_est,totbio_est_adj,
+  #                                  MRE_ssb,MRE_totbio,MRE_scaled,MRE_totbio_adj,q_est))
   ssb_compare <-  mre_table %>%
-    # dplyr::select(year, ssb_true, totbio_est_adj, lower, upper) %>% ## cod & herring
-    dplyr::select(year, total_biomass, totbio_est_adj, lower, upper) %>% ## sprat
+    dplyr::select(year, total_biomass, totbio_est, lower, upper) %>% ## cod & herring
+    # dplyr::select(year, ssb_true, totbio_est, lower, upper) %>% ## cod & herring
+    # dplyr::select(year, total_biomass, totbio_est, lower, upper) %>% ## sprat
+    # dplyr::select(year, ssb_true, ssb_est, lower, upper) %>% ## sprat
 
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
@@ -381,15 +386,17 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     labs(x = 'Year', y = 'MRE SSB, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
-  write.csv(mre_table,paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.csv"), row.names = FALSE)
+  write.csv(mre_table,
+            file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-ssb_mre.csv"),
+            row.names = FALSE)
 
   # png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
   #     height = 5, width = 12, unit = 'in',res = 520)
   # Rmisc::multiplot(ssb_compare, mre, cols = 2)
   # dev.off()
-  ggsave(mre, file = paste0(wham.dir.save,"/",file_suffix2,"-mre.png"),
+  ggsave(mre, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.png"),
          width = 4, height = 4, unit = 'in', dpi = 400)
-  ggsave(ssb_compare, file = paste0(wham.dir.save,"/",file_suffix2,"-ssb_compare.png"),
+  ggsave(ssb_compare, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-ssb_compare.png"),
          width = 4, height = 4, unit = 'in', dpi = 400)
 
 
@@ -399,8 +406,9 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    dir.main = wham.dir.save) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
 
-
-
+  plot.index.4.panel(mod = m2)
+  plot.index.4.panel(mod = m9)
+  plot.index.4.panel(mod = m9_qfix)
 
 }
 
