@@ -305,7 +305,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
   # m4_proj <- project_wham(model=mods$m4)
   if(mod_use$is_sdrep){
-    q <- ifelse(is.na(q_f(x = mod_use$opt$par['logit_q'])),1,  q_f(x = mod_use$opt$par['logit_q']))
+    q <-  ifelse(is.na(q_f(x = mod_use$opt$par['logit_q'])), 1, q_f(x = mod_use$opt$par['logit_q']))
     rpt <- mod_use$report()
     rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
@@ -314,28 +314,12 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = exp(std[ssb.ind, 1]),
              q_est = q,
-             # ssb_est_adj = exp(std[ssb.ind, 1])*(1+(1-mean(q))), ##herring
-             # ssb_est_adj = exp(std[ssb.ind, 1])*mean(q), ##sprat
-             # ssb_ratio = ssb_est/ssb_true,
              totbio_est =   rpt$total_biomass,
-             # totbio_est_adj = totbio_est*(1+(1-q)), ## herring
-             # totbio_est_adj =   totbio_est*q, ## sprat
-             # depl_est = ssb_est/ssb0_est,
-             # depl_true = ssb_true/ssb0_true,
-             # rel.ssb.vals= ssb_est/exp(std[SSB.t.ind, 1]),
              ssb_est_cv = std[ssb.ind, 2], ## maturity is fixed so cv holds for total
              lower = totbio_est - totbio_est*ssb_est_cv,
              upper = totbio_est + totbio_est*ssb_est_cv,
-             # lower = ssb_est - ssb_est*ssb_est_cv,
-             # upper = ssb_est + ssb_est*ssb_est_cv,
-             # MRE_depl = (depl_est-depl_true)/depl_true,
-             # MRE_scaled_depl = 100*MRE_depl,
              MRE_ssb = (ssb_true-ssb_est)/ssb_true,
-             # MRE_ssb_adj = (ssb_true - ssb_est_adj )/ssb_true,
-             # MRE_totbio = (ssb_true - totbio_est)/ssb_true,
              MRE_totbio = (total_biomass - totbio_est)/total_biomass,
-             # MRE_totbio_adj = (ssb_true - totbio_est_adj)/ssb_true, ## herring
-             # MRE_totbio_adj = (total_biomass  - totbio_est_adj)/total_biomass , ## Sprat
              MRE_scaled = 100*MRE_totbio,
              fc = fractional_coverage_use)
   } else{
@@ -405,10 +389,6 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    res = 250,
                    dir.main = wham.dir.save) # default is png
   # plot_wham_output(mod=m4_proj, out.type='html')
-
-  plot.index.4.panel(mod = m2)
-  plot.index.4.panel(mod = m9)
-  plot.index.4.panel(mod = m9_qfix)
 
 }
 
