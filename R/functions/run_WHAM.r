@@ -19,7 +19,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    'perfect_information',
                    paste0("fractional_coverage=", fractional_coverage_use))
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
-  if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-ssb_mre.csv"))){
+  if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
     cat(paste('already found outputs for ',file_suffix2,"\n"))
     break()
   }
@@ -371,7 +371,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     scale_color_manual(values = c(scenLabs2$Pal[scenLabs2$Var2 == scen] ,
                                   'grey22'),
                        labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
-    labs(x = 'Year', y = 'SSB (kmt)') +
+    labs(x = 'Year', y = 'Biomass (kmt)') +
     theme(legend.position='top') +
     labs(color = '') +
     {if(spname == 'AtlanticHerring') scale_y_continuous(limits = c(500,3000))}
@@ -383,11 +383,11 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     geom_line() +
     # scale_x_continuous(limits = c(2040,2099))+
     scale_y_continuous(limits = c(-50,50)) +
-    labs(x = 'Year', y = 'MRE SSB, %')+
+    labs(x = 'Year', y = 'MRE Biomass, %')+
     geom_hline(yintercept = 0, color = 'pink')
 
   write.csv(mre_table,
-            file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-ssb_mre.csv"),
+            file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"),
             row.names = FALSE)
 
   # png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
@@ -396,7 +396,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # dev.off()
   ggsave(mre, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.png"),
          width = 4, height = 4, unit = 'in', dpi = 400)
-  ggsave(ssb_compare, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-ssb_compare.png"),
+  ggsave(ssb_compare, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-biomass_compare.png"),
          width = 4, height = 4, unit = 'in', dpi = 400)
 
 
