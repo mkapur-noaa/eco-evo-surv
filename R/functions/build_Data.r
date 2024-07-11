@@ -29,7 +29,7 @@ build_Data<-function(scenario,
 
   ## string designators
   scen <- scenLabs2[scenario,2]
-  repID2 <- sort(as.character(0:28))[repID]
+  repID2 <- repID-1 #sort(as.character(0:27))[repID]
   spname <- sppLabs2[sppIdx,2]
 
   file_suffix <- paste(spname,scen,repID2,sep = '-')
@@ -40,8 +40,8 @@ build_Data<-function(scenario,
   ## where the WHAM outputs are to be stored
   ## Species-Scenario head folder
   head.dir <- here::here('outputs','wham_runs',paste(spname,scen, sep = '-')); if(!dir.exists(head.dir)) dir.create(head.dir)
-  if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
   if(is.null(date.use)){
+    if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
     wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
   } else{
     wham.dir <- here::here(head.dir,date.use,paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)

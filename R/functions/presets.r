@@ -121,13 +121,17 @@ maturity_optim_fn <- function(pars = c(x0,k), md = maturity_data, amax = max_age
 }
 
 ## index for alphabetized reps
-ordered_reps <- data.frame(lab = paste0('rep',1:27)) %>%
+ordered_reps0 <- data.frame(lab = paste0('rep',0:27)) %>%
   arrange(lab) %>%
-  mutate(idx0 = as.numeric(gsub('rep','',lab)),
-         idx = 1:27) %>%
-  arrange(idx0) %>%
-  dplyr::select(idx) %>%
+  mutate(idx0 = as.numeric(gsub('rep','',lab)), ## true replicate ID
+         idx = 0:27, ## ordered list
+         idx1 = idx+1) %>% ## index-friendly
+  arrange(idx0)
+
+ordered_reps <- ordered_reps0 %>%
+  dplyr::select(idx1) %>%
   t()
+
 # maturity_optim_fn <- function(pars){
 #   x0_use = pars[1];
 #   mat_temp <- logistic2(x = 1:max_age_pop, x0=x0_use, amax = max_age_pop)

@@ -14,24 +14,23 @@ invisible(lapply(list.files(
 ## (e.g., obs error, survey array, years or frequency thereof, etc)
 
 #* parallel ----
-cores <- detectCores() - 2
-cl <- makeCluster(cores)
-registerDoParallel(cl)
 ## one species, one replicate, one scenario, two fc scenarios = 2 mins
 ## three spp, one replicate, four scenarios  = 4 mins
 ## four spp, one replicate, four scenarios = 7 mins
 ## four spp, five replicates, one scenario = CRASH
 ## one spp, eight replicates, one scenario = 6 mins
+cores <- detectCores() - 2
+cl <- makeCluster(cores)
+registerDoParallel(cl)
 
-## index for alphabetized reps
-ordered_reps <- cbind(lab = paste0('rep',1:27),idx = 1:27) %>% arrange(lab) %>% select(idx)
-foreach(scenario = 4) %:%
+foreach(scenario = 2:4) %:%
   foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[1]) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
-  foreach(repl = 2:15)  %dopar%  {
+  foreach(repl = 9:10)  %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
+
     scen_use = scenario
     sp_use = species
     replicate_use = repl
@@ -75,9 +74,17 @@ dat_files <-
   stringr::str_split_fixed(., "-", 4) %>%
   data.frame()
 
-## species, scenario, fc should be 27 each
-## species, scenario should be 54 each
+## species, rep should be 4scen * 2fc = 8 each
+dat_files %>%
+  summarise(n=length(unique(X3)), .by = c(X1,X2)) %>%
+  arrange(X1,n)
 
+## species, scenario should be 54 each
+dat_files %>%
+  summarise(n=n(), .by = c(X1,X2)) %>%
+  arrange(X1,X2)
+
+## species, scenario, fc should be 28 each (0:27)
 dat_files %>%
   summarise(n=n(), .by = c(X1,X2,X4)) %>%
   arrange(X1,X2)
