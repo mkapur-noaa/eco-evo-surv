@@ -19,20 +19,21 @@ cl <- makeCluster(cores)
 registerDoParallel(cl)
 ## one species, one replicate, one scenario, two fc scenarios = 2 mins
 ## three spp, one replicate, four scenarios  = 4 mins
-foreach(scenario = 1:4) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
-  foreach(repl = 1)  %dopar%  {
+## four spp, one replicate, four scenarios = 7 mins
+## four spp, five replicates, one scenario = CRASH
+## one spp, eight replicates, one scenario = 6 mins
+foreach(scenario = 4) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[2]) %:%
+  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
+  foreach(repl = 2:15)  %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
     scen_use = scenario
-
     sp_use = species
-
     replicate_use = repl
 
     for (fc_use in c(1, 0.15)) {
-      # for(fc_use in c(1)){
       build_Data(
         scenario = scen_use,
         sppIdx = sp_use,
@@ -50,7 +51,7 @@ foreach(scenario = 1:4) %:%
         units = 'biomass',
         units_scalar = 1,
         # date.use = "2024-05-20",
-        # date.use = "2024-07-08",
+        date.use = "2024-07-09",
         do_GAM = FALSE
       )
     } ## end fractional coverage loop
@@ -59,6 +60,22 @@ foreach(scenario = 1:4) %:%
 # When you're done, clean up the cluster
 stopImplicitCluster()
 stopCluster()
+
+#* check how many were made ----
+dat_files <-
+  list.files(here::here('outputs', 'wham_runs'),
+             recursive = TRUE,
+             pattern = '*wham_survey.csv', full.names = TRUE) %>%
+  .[grepl('2024-07-09/rep', .)] %>%
+  basename(.) %>%
+  gsub("-wham_survey.csv","",.) %>%
+  stringr::str_split_fixed(., "-", 4) %>%
+  data.frame()
+dat_files %>%
+  summarise(n=n(), .by = c(X1,X2,X4)) %>%
+  arrange(X1,X2) ## species and fc, should have 27REP * 2FC = 54 for each
+
+
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
