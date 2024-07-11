@@ -119,6 +119,15 @@ maturity_optim_fn <- function(pars = c(x0,k), md = maturity_data, amax = max_age
   }
   return(obj)
 }
+
+## index for alphabetized reps
+ordered_reps <- data.frame(lab = paste0('rep',1:27)) %>%
+  arrange(lab) %>%
+  mutate(idx0 = as.numeric(gsub('rep','',lab)),
+         idx = 1:27) %>%
+  arrange(idx0) %>%
+  dplyr::select(idx) %>%
+  t()
 # maturity_optim_fn <- function(pars){
 #   x0_use = pars[1];
 #   mat_temp <- logistic2(x = 1:max_age_pop, x0=x0_use, amax = max_age_pop)

@@ -26,7 +26,7 @@ registerDoParallel(cl)
 ## index for alphabetized reps
 ordered_reps <- cbind(lab = paste0('rep',1:27),idx = 1:27) %>% arrange(lab) %>% select(idx)
 foreach(scenario = 4) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[2]) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[1]) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
   foreach(repl = 2:15)  %dopar%  {
     invisible(lapply(list.files(
@@ -74,9 +74,13 @@ dat_files <-
   gsub("-wham_survey.csv","",.) %>%
   stringr::str_split_fixed(., "-", 4) %>%
   data.frame()
+
+## species, scenario, fc should be 27 each
+## species, scenario should be 54 each
+
 dat_files %>%
   summarise(n=n(), .by = c(X1,X2,X4)) %>%
-  arrange(X1,X2) ## species and fc, should have 27REP * 2FC = 54 for each
+  arrange(X1,X2)
 
 
 
