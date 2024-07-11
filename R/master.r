@@ -22,6 +22,9 @@ registerDoParallel(cl)
 ## four spp, one replicate, four scenarios = 7 mins
 ## four spp, five replicates, one scenario = CRASH
 ## one spp, eight replicates, one scenario = 6 mins
+
+## index for alphabetized reps
+ordered_reps <- cbind(lab = paste0('rep',1:27),idx = 1:27) %>% arrange(lab) %>% select(idx)
 foreach(scenario = 4) %:%
   foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[2]) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
