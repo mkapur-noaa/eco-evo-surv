@@ -65,7 +65,7 @@ build_Data<-function(scenario,
     laa[a,'age'] <- a
     laa[a,'length_cm'] <- vonBpars$lInf*(1-exp(-vonBpars$K*(a-vonBpars$t0)))
   }
-
+  #
   if(fractional_coverage_use==1){
     write.table(laa,
                 sep = ' ',
@@ -97,9 +97,6 @@ build_Data<-function(scenario,
                   paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),
                   row.names = FALSE)
   } ## end if fractional_coverage_use == 1
-
-
-
 
   ## fishing mortality x age ----
   ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time, so just take first row
@@ -188,7 +185,7 @@ build_Data<-function(scenario,
     cbind(age = 1:max_age_pop, slx =   1/(1+exp(-log(19)*((1:max_age_pop)-srv_selex)/(max_age_pop-srv_selex))))
   }
 
-  #* filepaths for abundance, biomass ----
+  # #* filepaths for abundance, biomass ----
   if(fractional_coverage_use==1){
     age_spatial_path <- list.files(dirtmp,
                                    pattern = paste0('spatial_abundancebyAge-',spname),
@@ -283,8 +280,8 @@ build_Data<-function(scenario,
     filter(!all_zero) %>%
     summarise(max_age = max(age))
   max_age_survey <- as.numeric(max_age_survey)
-  #* run survey ----
-  # Initialize an empty list to store the results
+  # #* run survey ----
+  # # Initialize an empty list to store the results
   results_age <- results_index <- results_index_gam <- list()
   survey_array <- read.csv(here::here('outputs','wham_runs',
                                       paste0('2024-05-08-survey_array_',
@@ -378,8 +375,8 @@ build_Data<-function(scenario,
                      '-survey_obs_agecomp-numbers.csv'),
               row.names = FALSE)
 
-  #* combine & save indices ----
-  #** model-based (gam) ----
+  # #* combine & save indices ----
+  # #** model-based (gam) ----
   results_df_index_spatial <- do.call(rbind, results_index_gam)
 
   #** design-based ----
@@ -475,7 +472,7 @@ build_Data<-function(scenario,
     ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
     ## we take this at midyear to match asap3$dat$fracyr_spawn, the fraction of year elapsed before SSB calculation
 
-    waa <- read.csv(header = T, skip = 1,
+    waa_raw <- read.csv(header = T, skip = 1,
                     list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
                                recursive = T, full.names = TRUE)[repID]) %>%
       reshape2::melt(id = c('Time','Age')) %>%
@@ -484,7 +481,10 @@ build_Data<-function(scenario,
       mutate(rescaled_time =  scales::rescale(Time, to=c(0,1), na.rm = TRUE),   ## start to end year
              compressed_time = cut(rescaled_time, breaks = 26, labels = FALSE), ## ensure same 26 breaks each year
              .by = c(year)) %>%
-      mutate(avg_rescaled_time = mean(rescaled_time), .by = compressed_time) %>% ## account for some rounding issues
+      mutate(avg_rescaled_time = mean(rescaled_time), .by = compressed_time) ## account for some rounding issues
+
+    ## get the correct waa
+    waa_perfect <- waa_raw %>%
       filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## filter to spawntime
       group_by(year,Age) %>%
       summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
@@ -499,31 +499,15 @@ build_Data<-function(scenario,
       tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
       dplyr::select(-year)
 
-    write.table(waa,
+    write.table(waa_perfect,
                 sep = ' ',
-                paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb.csv'),
+                paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb_perfect.csv'),
                 row.names = FALSE)
 
 
-    #*   catch WAA ----
-    #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
-    #*   and therefore can't infer WAA in the catch explicitly.
-    #*   Only have biomass-at-age, total numbers, and mean size.
-    #*   Avoid using population NAA and monkeying with selex.
-    #*   FOR NOW, assume that the catch WAA matches the population
-
-
-    waa <- read.csv(header = T, skip = 1,
-                    list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
-                               recursive = T, full.names = TRUE)[repID]) %>%
-      reshape2::melt(id = c('Time','Age')) %>%
-      filter(variable == spname & !is.na(value) & Age > 0)  %>% ## get species- and age-specific values
-      mutate(year = floor(as.numeric(stringr::str_split_fixed(Time, "\\.", 1)) -70+2010)) %>%
-      # mutate(rescaled_time =  scales::rescale(Time, to=c(0,1), na.rm = TRUE),   ## start to end year
-      #        compressed_time = cut(rescaled_time, breaks = 26, labels = FALSE), ## ensure same 26 breaks each year
-      #        .by = c(year)) %>%
-      # mutate(avg_rescaled_time = mean(rescaled_time), .by = compressed_time) %>% ## account for some rounding issues
-      # filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## filter to spawntime
+    ## get the correct waa
+    waa_averaged <- waa_raw %>%
+      # filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## DO NOT filter to spawntime; average thru year
       group_by(year,Age) %>%
       summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
       ungroup() %>%
@@ -536,7 +520,20 @@ build_Data<-function(scenario,
       ungroup() %>%
       tidyr::pivot_wider(., id_cols = year, names_from = Age, values_from = mean_weight_kg) %>%
       dplyr::select(-year)
-    write.table(waa,
+
+    write.table(waa_averaged,
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-wham_waa_ssb_averaged.csv'),
+                row.names = FALSE)
+
+    #*   catch WAA ----
+    #*   Gave this some thought. TL;DR we don't have NAA/NAL in catch
+    #*   and therefore can't infer WAA in the catch explicitly.
+    #*   Only have biomass-at-age, total numbers, and mean size.
+    #*   Avoid using population NAA and monkeying with selex.
+    #*   FOR NOW, assume that the catch WAA matches the population
+
+    write.table(waa_averaged,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-wham_waa_catch.csv'),
                 row.names = FALSE)
