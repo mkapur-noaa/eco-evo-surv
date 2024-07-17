@@ -194,10 +194,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   #                                  total_biomass, totbio_est,totbio_est_adj,
   #                                  MRE_ssb,MRE_totbio,MRE_scaled,MRE_totbio_adj,q_est))
   ssb_compare <-  mre_table %>%
-    dplyr::select(year, total_biomass, totbio_est, lower, upper) %>% ## cod & herring
-    # dplyr::select(year, ssb_true, totbio_est, lower, upper) %>% ## cod & herring
-    # dplyr::select(year, total_biomass, totbio_est, lower, upper) %>% ## sprat
-    # dplyr::select(year, ssb_true, ssb_est, lower, upper) %>% ## sprat
+    dplyr::select(year, total_biomass, totbio_est, lower, upper) %>%
 
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
