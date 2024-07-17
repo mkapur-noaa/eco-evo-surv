@@ -17,7 +17,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   wham.dir <- file_suffix ## where to read things from
 
   ## subfolder with fractional coverage & ewaa used
-  filen3 <- paste0("fractional_coverage=", fractional_coverage_use,"_ewaa=",ewaa_use)
+  filen3 <- paste0("fractional_coverage=", fractional_coverage_use,"_ewaa=",ewaa_use,"_q=",q_treatment)
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
   if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
     cat(paste('already found outputs for ',file_suffix2,"\n"))
