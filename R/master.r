@@ -105,6 +105,7 @@ registerDoParallel(cl)
 foreach(file_use = files_to_run[21:54]) %:%
   foreach(fc_use = c(1, 0.15)) %:%
     foreach(ewaa_use = c('perfect','averaged'))  %dopar%  {
+      foreach(q_treatment_use = c('fixed','estimated'))  %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
@@ -112,6 +113,7 @@ foreach(file_use = files_to_run[21:54]) %:%
       yrs_use = 2010:2080,## years to run the assessment
       fractional_coverage_use = fc_use, ## which survey setup to read from
       ewaa_use = 'perfect', ## which ewaa input to read from
+      q_treatment = q_treatment_use, ## testing only; whether or not Q is estimated
       file_suffix = file_use
     )
   } ## end dopar loop
