@@ -224,10 +224,6 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
             file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"),
             row.names = FALSE)
 
-  # png(file =  paste0(wham.dir.save,"/",file_suffix2,"-ssb_mre.png"),
-  #     height = 5, width = 12, unit = 'in',res = 520)
-  # Rmisc::multiplot(ssb_compare, mre, cols = 2)
-  # dev.off()
   ggsave(mre, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.png"),
          width = 4, height = 4, unit = 'in', dpi = 400)
   ggsave(ssb_compare, file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-biomass_compare.png"),
@@ -237,8 +233,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # WHAM output plots for best model with projections ----
   plot_wham_output(mod=mod_use,
                    res = 250,
-                   dir.main = wham.dir.save) # default is png
-  # plot_wham_output(mod=m4_proj, out.type='html')
+                   dir.main = wham.dir.save)
 
 }
 
