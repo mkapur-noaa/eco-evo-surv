@@ -3,6 +3,7 @@
 
 run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                     fractional_coverage_use = 1,
+                    ewaa_use = 'perfect', ## perfect or averaged
                     file_suffix = NULL
 ){
 
@@ -14,10 +15,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   file_suffix2 <- paste0(filen2,'-',repID2) ## append to filenames
   wham.dir <- file_suffix ## where to read things from
 
-  ## subfolder with fractional coverage
-  filen3 <- ifelse(fractional_coverage_use==1,
-                   'perfect_information',
-                   paste0("fractional_coverage=", fractional_coverage_use))
+  ## subfolder with fractional coverage & ewaa used
+  filen3 <- paste0("fractional_coverage=", fractional_coverage_use,"_ewaa=",ewaa_use)
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
   if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
     cat(paste('already found outputs for ',file_suffix2,"\n"))
@@ -30,7 +29,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-',fractional_coverage_use,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
   # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
-  waa_ssb <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb.csv'),  skip = 1)[1:length(yrs_use),]
+  waa_ssb <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb_',ewaa_use,'.csv'),  skip = 1)[1:length(yrs_use),]
+
   N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
   true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_y.csv'))
   # true_biomass_age <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_ysa.csv')) %>%
@@ -128,7 +128,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                   fix_pars=list(NULL,
                                                                 c(1:asap3$dat$n_ages))), ## fix 'em all
                                  NAA_re = list(sigma="rec", cor="iid"))
-    input2$map$logit_q <- factor(NA) ## ensure q is fixed
+    if(fractional_coverage_use ==1 ) input2$map$logit_q <- factor(NA) ## ensure q is fixed
     m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m2)
 
@@ -149,10 +149,11 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                  # NAA_re = NULL
                                  )
 
-    input9$data$N1_model  ## 0 = fixed effects (NAA vector, default), 1 = initR and equilF
-    input9$par$log_N1_pars ## will be vector OR two pars depending on N1_model
+    # input9$data$N1_model  ## 0 = fixed effects (NAA vector, default), 1 = initR and equilF
+    # input9$par$log_N1_pars ## will be vector OR two pars depending on N1_model
     # an initial recruitment and an instantaneous fishing mortality rate
-    input9$par$logit_q; input9$map$logit_q <- factor(NA) ## ensure q is fixed
+    # input9$par$logit_q; input9$map$logit_q <- factor(NA) ## ensure q is fixed
+    # if(fractional_coverage_use ==1 ) input9$map$logit_q <- factor(NA) ## ensure q is fixed
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
     # input9$map
@@ -176,6 +177,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
 
     # input2$data$fracyr_indices
     # input2$data$fracyr_SSB
+    if(fractional_coverage_use ==1 ) input6$map$logit_q <- factor(NA) ## ensure q is fixed
     m6 <- fit_wham(input6, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m6)
     mod_use <- m6; input_use <- input6
@@ -357,13 +359,13 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                        labels = c('evOsmose Operating Model','WHAM Estimation Model')) +
     labs(x = 'Year', y = 'Biomass (kmt)') +
     theme(legend.position='top') +
-    labs(color = '') +
-    {if(spname == 'AtlanticHerring') scale_y_continuous(limits = c(500,3000))}
+    labs(color = '')
+    # {if(spname == 'AtlanticHerring') scale_y_continuous(limits = c(500,3000))}
   # {if(spname == 'AtlanticCod') scale_y_continuous(limits = c(250,1000))} +
   # {if(spname == 'EuropeanSprat') scale_y_continuous(limits = c(2000,9000))}
   # scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
 
-  mre<- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
+  mre <- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
     geom_line() +
     # scale_x_continuous(limits = c(2040,2099))+
     scale_y_continuous(limits = c(-50,50)) +
