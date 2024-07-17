@@ -150,9 +150,6 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   save(input_use, file = paste0(wham.dir.save,"/",Sys.Date(),'_wham_input.rdata'))
   save(mod_use, file = paste0(wham.dir.save,"/",Sys.Date(),'_model.rdata'))
   # load(paste0(wham.dir.save,'/model.rdata')) ## loads as mod_use
-  # Project best model, m4,
-  # Use default values: 3-year projection, use average selectivity, M, etc. from last 5 years
-  # m4_proj <- project_wham(model=mods$m4)
   if(mod_use$is_sdrep){
     q <-  ifelse(is.na(q_f(x = mod_use$opt$par['logit_q'])), 1, q_f(x = mod_use$opt$par['logit_q']))
     rpt <- mod_use$report()
