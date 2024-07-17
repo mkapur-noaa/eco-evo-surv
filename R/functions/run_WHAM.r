@@ -170,7 +170,9 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              MRE_ssb = (ssb_true-ssb_est)/ssb_true,
              MRE_totbio = (total_biomass - totbio_est)/total_biomass,
              MRE_scaled = 100*MRE_totbio,
-             fc = fractional_coverage_use)
+             fc = fractional_coverage_use,
+             ewaa = ewaa_use,
+             q_treatment)
   } else{
     ssb.ind <- mod_use$report()$SSB[1:length(mod_use$years)]
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
@@ -180,7 +182,9 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              upper = ssb_est,
              MRE = (ssb_est-ssb_true)/ssb_true,
              MRE_scaled = 100*MRE,
-             fc = fractional_coverage_use)
+             fc = fractional_coverage_use,
+             ewaa = ewaa_use,
+             q_treatment)
   }
 
   # cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
