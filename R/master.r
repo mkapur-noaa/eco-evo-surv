@@ -23,10 +23,10 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(scenario = 2:4) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[1]) %:%
+foreach(scenario = 1:4) %:%
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[2:4]) %:%
   # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
-  foreach(repl = 9:10)  %dopar%  {
+  foreach(repl = c(1:27))  %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
@@ -35,7 +35,7 @@ foreach(scenario = 2:4) %:%
     sp_use = species
     replicate_use = repl
 
-    for (fc_use in c(1, 0.15)) {
+    for (fc_use in c(1)) {
       build_Data(
         scenario = scen_use,
         sppIdx = sp_use,
@@ -52,7 +52,6 @@ foreach(scenario = 2:4) %:%
         # obs_error = NA, ## observation error for surveys
         units = 'biomass',
         units_scalar = 1,
-        # date.use = "2024-05-20",
         date.use = "2024-07-09",
         do_GAM = FALSE
       )
@@ -74,53 +73,45 @@ dat_files <-
   stringr::str_split_fixed(., "-", 4) %>%
   data.frame()
 
-## species, rep should be 4scen * 2fc = 8 each
-dat_files %>%
-  summarise(n=length(unique(X3)), .by = c(X1,X2)) %>%
-  arrange(X1,n)
-
-## species, scenario should be 54 each
+## species, scenario should be 56 each
 dat_files %>%
   summarise(n=n(), .by = c(X1,X2)) %>%
-  arrange(X1,X2)
-
-## species, scenario, fc should be 28 each (0:27)
-dat_files %>%
-  summarise(n=n(), .by = c(X1,X2,X4)) %>%
-  arrange(X1,X2)
-
-
+  arrange(X1,n) %>%
+  filter(n!=56)
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-# greppy <- paste0('rep',c(0,"1\\b","2\\b",10,11,12), collapse = "|")
+greppy <- paste0('rep',c(0,"1\\b","2\\b",3,4,5), collapse = "|")
+greppy <- paste0('rep',15:20, collapse = "|")
 
 files_to_run <-
   list.dirs.depth.n(here::here('outputs', 'wham_runs'), n = 3) %>%
-  .[grepl('2024-05-20/rep', .)] %>%
+  .[grepl('2024-07-09/rep', .)] %>%
+  .[!grepl('Saithe',.)] %>%
   # .[grepl('Herring',.)] #%>%
-  .[grepl(paste(10:14, collapse = "|"), .)] %>%
-  .[grepl('noCC_noEvo', .)] #%>%
-# .[!grepl('\\bCC_Evo',.)] #%>%
+  .[grepl(greppy, .)] %>%
+  .[!grepl('noCC_noEvo', .)] %>%
+# .[grepl('\\bCC_Evo',.)] %>%
+.[!grepl(paste(files_to_run_done,collapse ="|"), .)]
 
-# .[!grepl(greppy, .)]
 
+files_to_run_done <- c(files_to_run_done, files_to_run[1:20])
 # file_suffix =file_use= files_to_run[2];yrs_use = 2010:2080;fractional_coverage_use=fc_use = 0.15
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run) %:%
-  foreach(fc_use = c(1, 0.15))  %dopar%  {
+foreach(file_use = files_to_run[21:54]) %:%
+  foreach(fc_use = c(1, 0.15)) %:%
+    foreach(ewaa_use = c('perfect','averaged'))  %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
     run_WHAM(
-      yrs_use = 2010:2080,
-      ## years to run the assessment
-      fractional_coverage_use = fc_use,
-      ## which survey setup to read from
+      yrs_use = 2010:2080,## years to run the assessment
+      fractional_coverage_use = fc_use, ## which survey setup to read from
+      ewaa_use = 'perfect', ## which ewaa input to read from
       file_suffix = file_use
     )
   } ## end dopar loop
@@ -136,57 +127,13 @@ stopCluster()
 #   .[grepl('perfect_information',.)]
 
 mre_all0 <- list.files(
-  files_to_run,
-  pattern = 'ssb_mre.csv',
+  c(files_to_run_done,files_to_run),
+  pattern = 'mre.csv',
   recursive = TRUE,
   full.names = TRUE
 ) %>%
   lapply(., FUN = read.csv) %>%
   bind_rows()
-
-
-# mre_all_mod$scenario <- factor(mre_all_mod$scenario)
-
-# mre_all_megsie0 <- mre_all0 %>%
-#   dplyr::select(species, scenario, fc, replicate,
-#                 total_biomass,
-#                 total_biomass_cv, year, MRE, MRE_scaled) %>%
-#   mutate(fc = as.factor(fc)) %>%
-#   dplyr::filter(fc %in% c("1","0.15"))
-#
-#
-# mre_all_megsie1 <- merge(mre_all_megsie0,sppLabs2[,c('Var2','Var5')],
-#                      by.x = 'species',
-#                      by.y = 'Var2')
-# names(mre_all_megsie1)[names(mre_all_megsie1)=='Var5'] <- 'trophic'
-
-# sobs_cv <- list.files(files_to_run,
-#                       pattern = paste0('-survey_obs_biomass.csv'),
-#                       recursive = TRUE,
-#                       full.names = TRUE) %>%
-#   lapply(., FUN = read.csv) %>%
-#   bind_rows() %>%
-#   mutate(fc = as.factor(fc)) %>%
-#   dplyr::filter(fc %in% c("1","0.15")) %>%
-#   mutate(abund_mean = abund_mean/1000) %>%
-#   dplyr::select(fc, year, replicate, species, scenario, abund_cv)
-#
-# ## merge dfs, collapses replicate
-# mre_all_megsie <- merge(mre_all_megsie1,
-#                         sobs_cv,
-#                         by = c('year','replicate','fc','scenario','species'),
-#                         all.x=TRUE)
-#
-# View(subset(mre_all_megsie, is.na(abund_cv)))
-#
-# write.csv(mre_all_megsie, file = here::here('outputs','summary_data','mre_for_megsie-2024-05-24.csv'),row.names = FALSE)
-# mre_all_megsie$trophic <- mre_all_megsie$Var5
-# mre_all_mod$species <- factor(mre_all_mod$species, levels = sppLabs2$Var5[sppLabs2$Var4])
-# mre_all_mod$replicate <- factor(mre_all_mod$replicate)
-# mre_all_mod$climate_change <- factor(grepl('\\bCC',mre_all_mod$scenario))
-# mre_all_mod$evolution <- factor(grepl('_Evo',mre_all_mod$scenario))
-
-
 
 ## check how many ran
 summarise(mre_all0,
@@ -227,7 +174,7 @@ for (spp in unique(mre_all$species)) {
     geom_ribbon(aes(ymin = lwr95, ymax = upr95),
                 alpha = 0.15,
                 color = NA) +
-    scale_y_continuous(limits = c(-60, 30), breaks = seq(-50, 50, 10)) +
+    scale_y_continuous(limits = c(-60, 60), breaks = seq(-50, 50, 10)) +
     scale_fill_manual(values = scenPal, labels = scenLabs) +
     scale_color_manual(values = scenPal, labels = scenLabs) +
     labs(
@@ -253,19 +200,20 @@ for (spp in unique(mre_all$species)) {
   # Rmisc::multiplot(plotlist = list(plist[[1]],plist[[2]]), cols = 2)
   # dev.off()
 
-  ggsave(
-    last_plot(),
-    file = here(
-      'figs',
-      paste0(Sys.Date(), '-', spp, '-MRE_by_scenario-95ci.png')
-    ),
-    width = 4,
-    height = 6,
-    unit = 'in',
-    dpi = 400
-  )
+  # ggsave(
+  #   last_plot(),
+  #   file = here(
+  #     'figs',
+  #     paste0(Sys.Date(), '-', spp, '-MRE_by_scenario-95ci.png')
+  #   ),
+  #   width = 4,
+  #   height = 6,
+  #   unit = 'in',
+  #   dpi = 400
+  # )
 
 }
+
 # }
 write.csv(
   mre_all0,
@@ -541,9 +489,10 @@ strip_waa <- function(x) {
   waa$age <- as.numeric(waa$age)
   return(waa)
 }
+
 waa_index <- list.files(
   files_to_run,
-  pattern = 'wham_waa_ssb.csv',
+  pattern = 'wham_waa_ssb_perfect.csv',
   recursive = TRUE,
   full.names = TRUE
 ) %>%
@@ -586,17 +535,17 @@ for (spp in c(sppLabs2$Var2[sppLabs2$Var4])) {
       color = '',
       fill = ''
     )
-  ggsave(
-    last_plot(),
-    file = here('figs', paste0('ewaa4_by_scenario_95ci-', spp, '.png')),
-    width = 3,
-    height = 4,
-    unit = 'in',
-    dpi = 400
-  )
+  # ggsave(
+  #   last_plot(),
+  #   file = here('figs', paste0(Sys.Date(),'-ewaa4_by_scenario_95ci-', spp, '.png')),
+  #   width = 3,
+  #   height = 4,
+  #   unit = 'in',
+  #   dpi = 400
+  # )
 }
 
-#* input agecomps by secnario ----
+#* input agecomps by scenario ----
 acomps_index <- list.files(
   files_to_run,
   pattern = 'survey_obs_agecomp',
@@ -691,6 +640,47 @@ ggsave(
 #   theme(legend.position = 'none')+
 #   facet_grid(scenario~fc)
 #* brute ----
+#* stuff for megsie----
+ # mre_all_mod$scenario <- factor(mre_all_mod$scenario)
+
+# mre_all_megsie0 <- mre_all0 %>%
+#   dplyr::select(species, scenario, fc, replicate,
+#                 total_biomass,
+#                 total_biomass_cv, year, MRE, MRE_scaled) %>%
+#   mutate(fc = as.factor(fc)) %>%
+#   dplyr::filter(fc %in% c("1","0.15"))
+#
+#
+# mre_all_megsie1 <- merge(mre_all_megsie0,sppLabs2[,c('Var2','Var5')],
+#                      by.x = 'species',
+#                      by.y = 'Var2')
+# names(mre_all_megsie1)[names(mre_all_megsie1)=='Var5'] <- 'trophic'
+
+# sobs_cv <- list.files(files_to_run,
+#                       pattern = paste0('-survey_obs_biomass.csv'),
+#                       recursive = TRUE,
+#                       full.names = TRUE) %>%
+#   lapply(., FUN = read.csv) %>%
+#   bind_rows() %>%
+#   mutate(fc = as.factor(fc)) %>%
+#   dplyr::filter(fc %in% c("1","0.15")) %>%
+#   mutate(abund_mean = abund_mean/1000) %>%
+#   dplyr::select(fc, year, replicate, species, scenario, abund_cv)
+#
+# ## merge dfs, collapses replicate
+# mre_all_megsie <- merge(mre_all_megsie1,
+#                         sobs_cv,
+#                         by = c('year','replicate','fc','scenario','species'),
+#                         all.x=TRUE)
+#
+# View(subset(mre_all_megsie, is.na(abund_cv)))
+#
+# write.csv(mre_all_megsie, file = here::here('outputs','summary_data','mre_for_megsie-2024-05-24.csv'),row.names = FALSE)
+# mre_all_megsie$trophic <- mre_all_megsie$Var5
+# mre_all_mod$species <- factor(mre_all_mod$species, levels = sppLabs2$Var5[sppLabs2$Var4])
+# mre_all_mod$replicate <- factor(mre_all_mod$replicate)
+# mre_all_mod$climate_change <- factor(grepl('\\bCC',mre_all_mod$scenario))
+# mre_all_mod$evolution <- factor(grepl('_Evo',mre_all_mod$scenario))
 # for(scenario in 1){
 #   for(species in  c(sppLabs2$Var3[sppLabs2$Var4]+1)){
 #     for(replicate in 1:3){
