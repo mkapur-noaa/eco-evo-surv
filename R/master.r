@@ -115,6 +115,7 @@ foreach(file_use = files_to_run[315:329]) %:%
       fractional_coverage_use = fc_use, ## which survey setup to read from
       ewaa  = ewaa_use, ## which ewaa input to read from
       q_treatment = q_treatment_use, ## testing only; whether or not Q is estimated
+      inputN = ifelse(fc_use < 1, fc_use*100), ## reduce inputN accordingly
       file_suffix = file_use
     )
   } ## end dopar loop
