@@ -3,8 +3,9 @@
 
 run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                     fractional_coverage_use = 1,
-                    ewaa_use = 'perfect', ## perfect or averaged
+                    ewaa = 'perfect', ## perfect or averaged
                     q_treatment = 'estimated', ## how q should be treated
+                    inputN_use = 100, ## inputN for survey agecomps
                     file_suffix = NULL
 ){
 
@@ -17,28 +18,30 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   wham.dir <- file_suffix ## where to read things from
 
   ## subfolder with fractional coverage & ewaa used
-  filen3 <- paste0("fractional_coverage=", fractional_coverage_use,"_ewaa=",ewaa_use,"_q=",q_treatment)
+  filen3 <- paste0("fractional_coverage=",
+                   fractional_coverage_use,"_ewaa=",
+                   ewaa_use,"_q=",
+                   q_treatment, "_inputN=",
+                   inputN_use)
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
   if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
     cat(paste('already found outputs for ',file_suffix2,"\n"))
     break()
   }
+
   ## load input data ----
   mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
   catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
   survey <- read.table(paste0(wham.dir,"/",file_suffix2,'-',fractional_coverage_use,'-wham_survey.csv'),  skip = 1)[1:length(yrs_use),]
-  # ncol(survey) == asap3$dat$n_ages+4 #(year, obs, cv, ss)
   waa_catch <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_catch.csv'),  skip = 1)[1:length(yrs_use),]
   waa_ssb <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_waa_ssb_',ewaa_use,'.csv'),  skip = 1)[1:length(yrs_use),]
 
   N_init <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_N_ini.csv'),  skip = 1)[2,]
   true_biomass <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_y.csv'))
-  # true_biomass_age <- read.csv(paste0(wham.dir,"/",file_suffix2,'-true_biomass_ysa.csv')) %>%
-  #   group_by(year, age) %>% summarise(value = sum(value)) %>% ungroup()
-  #
-  # # ## load asap3-style data file ----
-  # # # copy templated asap3 data file to working directory
+
+  ## load asap3-style data file ----
+  #  copy templated asap3 data file to working directory
   file.copy(from=file.path(here::here('osmose_wham_template.dat')),
             to=wham.dir, overwrite=TRUE)
   # read asap3 data file and convert to input list for wham
@@ -61,9 +64,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$index_month <- 7
   asap3$dat$use_index_acomp <- 1
   asap3$dat$use_index <- 1
-  #
   asap3$dat$sel_block_assign <- matrix(1,asap3$dat$n_years )
-  #
+
   # #* initial pars, phase, lambdas ----
   asap3$dat$N1_ini <- 0.5*as.matrix(N_init, nrow = 1) ## halve these for females only
   # asap3$dat$fracyr_spawn <- ifelse(spname=='AtlanticHerring',0.05,0.5)
@@ -124,6 +126,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                  NAA_re = list(sigma="rec", cor="iid"## ranef recdevs, uncorrelated
                                               )
                                  )
+    input9$data$index_Neff <- matrix(inputN_use,ncol = 1, nrow = nrow(input9$data$index_Neff))
     if(q_treatment == 'fixed') input9$map$logit_q <- factor(NA) ## ensure q is fixed
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
@@ -159,7 +162,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
     mre_table <- true_biomass[1:length(mod_use$years),] %>%
       mutate(ssb_est = exp(std[ssb.ind, 1]),
-             q_est = q,
+             q_used = q,
              totbio_est =   rpt$total_biomass,
              ssb_est_cv = std[ssb.ind, 2], ## maturity is fixed so cv holds for total
              lower = totbio_est - totbio_est*ssb_est_cv,
@@ -177,8 +180,9 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              ssb_est_cv =NA,
              lower = ssb_est ,
              upper = ssb_est,
-             MRE = (ssb_est-ssb_true)/ssb_true,
-             MRE_scaled = 100*MRE,
+             MRE_ssb = (ssb_true-ssb_est)/ssb_true,
+             MRE_totbio = (total_biomass - totbio_est)/total_biomass,
+             MRE_scaled = 100*MRE_totbio,
              fc = fractional_coverage_use,
              ewaa = ewaa_use,
              q_treatment)
