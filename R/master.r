@@ -81,38 +81,39 @@ dat_files %>%
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-greppy <- paste0('rep',c(0,"1\\b","2\\b",3,4,5), collapse = "|")
-greppy <- paste0('rep',15:20, collapse = "|")
+# greppy <- paste0('rep',c(0,"1\\b","2\\b",3,4,5), collapse = "|")
+# greppy <- paste0('rep',15:20, collapse = "|")
 
 files_to_run <-
   list.dirs.depth.n(here::here('outputs', 'wham_runs'), n = 3) %>%
-  .[grepl('2024-07-09/rep', .)] %>%
-  .[!grepl('Saithe',.)] %>%
+  .[grepl('2024-07-09/rep', .)]  %>%
+  .[!grepl('Saithe',.)] #%>%
   # .[grepl('Herring',.)] #%>%
-  .[grepl(greppy, .)] %>%
-  .[!grepl('noCC_noEvo', .)] %>%
+  # .[grepl(greppy, .)] %>%
+  # .[!grepl('noCC_noEvo', .)] %>%
 # .[grepl('\\bCC_Evo',.)] %>%
-.[!grepl(paste(files_to_run_done,collapse ="|"), .)]
+# .[!grepl(paste(files_to_run_done,collapse ="|"), .)]
 
 
-files_to_run_done <- c(files_to_run_done, files_to_run[1:20])
+# files_to_run_done <- c(files_to_run_done, files_to_run[1:20])
 # file_suffix =file_use= files_to_run[2];yrs_use = 2010:2080;fractional_coverage_use=fc_use = 0.15
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run[21:54]) %:%
-  foreach(fc_use = c(1, 0.15)) %:%
-    foreach(ewaa_use = c('perfect','averaged'))  %dopar%  {
-      foreach(q_treatment_use = c('fixed','estimated'))  %dopar%  {
+foreach(file_use = files_to_run[315:329]) %:%
+  foreach(ewaa_use = c('perfect','averaged')[1])  %:%
+  foreach(q_treatment_use = c('fixed','estimated')[1])  %:%
+  foreach(fc_use = c(1, 0.15)) %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
+
     run_WHAM(
       yrs_use = 2010:2080,## years to run the assessment
       fractional_coverage_use = fc_use, ## which survey setup to read from
-      ewaa_use = 'perfect', ## which ewaa input to read from
+      ewaa  = ewaa_use, ## which ewaa input to read from
       q_treatment = q_treatment_use, ## testing only; whether or not Q is estimated
       file_suffix = file_use
     )
@@ -129,36 +130,44 @@ stopCluster()
 #   .[grepl('perfect_information',.)]
 
 mre_all0 <- list.files(
-  c(files_to_run_done,files_to_run),
+  files_to_run,
   pattern = 'mre.csv',
   recursive = TRUE,
   full.names = TRUE
 ) %>%
   lapply(., FUN = read.csv) %>%
-  bind_rows()
+  bind_rows() %>%
+  filter(q_treatment == 'fixed' & ewaa == 'perfect' &fc != 0.15001) %>%
+  distinct() ## drop old runs and duplicates
 
-## check how many ran
+## check how many ran (should be 28 each)
 summarise(mre_all0,
           nrep = n() / 71,
           .by = c(scenario, species, fc))
 
+## IDs of fails
 summarise(mre_all0,
           nrep = n() / 71,
           .by = c(scenario, replicate, species)) %>%
-  filter(nrep == 1)
+  tidyr::complete(replicate, scenario, species) %>%
+  filter(is.na(nrep)) %>%
+  arrange(species, scenario, replicate) %>%
+  View()
 
 mre_all <- mre_all0 %>%
-  filter(fc != 0.15001) %>%
-  group_by(year, scenario, species, fc) %>%
+  group_by(year, scenario, species, fc, ewaa) %>%
   summarize(
-    med = median(MRE_scaled),
+    med2 = median(MRE_ssb*100),
+    med  = median(MRE_scaled),
     lwr50 = quantile(MRE_scaled, .25),
     upr50 = quantile(MRE_scaled, .75),
     lwr95 = quantile(MRE_scaled, .0275),
     upr95 = quantile(MRE_scaled, .975)
   )
 
+mre_all$ewaa <- factor(mre_all$ewaa, levels = c('perfect','averaged'))
 mre_all$fc <- factor(mre_all$fc, levels = c(1, 0.15))
+
 for (spp in unique(mre_all$species)) {
   # for(fcc in unique(mre_all$fc)){
   # ggplot(mre_all,
@@ -185,10 +194,12 @@ for (spp in unique(mre_all$species)) {
       color = '',
       fill = ''
     ) +
-    facet_wrap( ~ fc, labeller = as_labeller(fcLabs), ncol = 1) +
+    # facet_wrap(   ~ fc, labeller = as_labeller(fcLabs), ncol = 1) +
+
+    facet_grid( fc ~ ewaa) +
     theme(
-      legend.position = 'none',
-      strip.text.x = element_blank(),
+      # legend.position = 'none',
+      # strip.text.x = element_blank(),
       axis.title = element_blank()
     )
 
