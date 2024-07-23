@@ -102,7 +102,7 @@ cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 
-foreach(file_use = files_to_run[315:329]) %:%
+foreach(file_use = files_to_run[309:329]) %:%
   foreach(ewaa_use = c('perfect','averaged')[1])  %:%
   foreach(q_treatment_use = c('fixed','estimated')[1])  %:%
   foreach(fc_use = c(1, 0.15)) %dopar%  {
@@ -115,7 +115,7 @@ foreach(file_use = files_to_run[315:329]) %:%
       fractional_coverage_use = fc_use, ## which survey setup to read from
       ewaa  = ewaa_use, ## which ewaa input to read from
       q_treatment = q_treatment_use, ## testing only; whether or not Q is estimated
-      inputN = ifelse(fc_use < 1, fc_use*100), ## reduce inputN accordingly
+      # inputN = ifelse(fc_use < 1, fc_use*100, 100), ## reduce inputN accordingly
       file_suffix = file_use
     )
   } ## end dopar loop
@@ -138,7 +138,7 @@ mre_all0 <- list.files(
 ) %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
-  filter(q_treatment == 'fixed' & ewaa == 'perfect' &fc != 0.15001) %>%
+  filter(q_treatment == 'fixed' & ewaa == 'perfect' & fc != 0.15001 ) %>%
   distinct() ## drop old runs and duplicates
 
 ## check how many ran (should be 28 each)
@@ -156,7 +156,7 @@ summarise(mre_all0,
   View()
 
 mre_all <- mre_all0 %>%
-  group_by(year, scenario, species, fc, ewaa) %>%
+  group_by(year, scenario, species, fc, inputN) %>%
   summarize(
     med2 = median(MRE_ssb*100),
     med  = median(MRE_scaled),
@@ -197,7 +197,7 @@ for (spp in unique(mre_all$species)) {
     ) +
     # facet_wrap(   ~ fc, labeller = as_labeller(fcLabs), ncol = 1) +
 
-    facet_grid( fc ~ ewaa) +
+    facet_grid( fc ~ inputN) +
     theme(
       # legend.position = 'none',
       # strip.text.x = element_blank(),
