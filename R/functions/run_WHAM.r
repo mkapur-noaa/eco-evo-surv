@@ -21,8 +21,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   filen3 <- paste0("fractional_coverage=",
                    fractional_coverage_use,"_ewaa=",
                    ewaa_use,"_q=",
-                   q_treatment, "_inputN=",
-                   inputN)
+                   q_treatment )
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
   if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
     cat(paste('already found outputs for ',file_suffix2,"\n"))
@@ -108,7 +107,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                                                 c(1:asap3$dat$n_ages))), ## fix 'em all
                                  NAA_re = list(sigma="rec", cor="iid"))
     if(q_treatment == 'fixed') input2$map$logit_q <- factor(NA) ## ensure q is fixed
-    input2$data$index_Neff <- matrix(inputN, ncol = 1, nrow = nrow(input2$data$index_Neff))
+    # input2$data$index_Neff <- matrix(inputN, ncol = 1, nrow = nrow(input2$data$index_Neff))
     m2 <- fit_wham(input2, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m2)
 
@@ -127,7 +126,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                                  NAA_re = list(sigma="rec", cor="iid"## ranef recdevs, uncorrelated
                                               )
                                  )
-    input9$data$index_Neff <- matrix(inputN, ncol = 1, nrow = nrow(input9$data$index_Neff))
+    # input9$data$index_Neff <- matrix(inputN, ncol = 1, nrow = nrow(input9$data$index_Neff))
     if(q_treatment == 'fixed') input9$map$logit_q <- factor(NA) ## ensure q is fixed
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
