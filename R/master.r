@@ -101,11 +101,11 @@ files_to_run <-
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
-
-foreach(file_use = files_to_run[309:329]) %:%
-  foreach(ewaa_use = c('perfect','averaged')[1])  %:%
-  foreach(q_treatment_use = c('fixed','estimated')[1])  %:%
-  foreach(fc_use = c(1, 0.15)) %dopar%  {
+# ,)
+foreach(file_use = files_to_run[c(77,197,321)]) %:%
+  foreach(ewaa_use = c('perfect','averaged')[2])  %:%
+  foreach(q_treatment_use = c('fixed','estimated')[2])  %:%
+  foreach(fc_use = c(1, 0.15)[2]) %dopar%  {
     invisible(lapply(list.files(
       here::here('R', 'functions'), full.names = TRUE
     ), FUN = source)) ## load all functions and presets
@@ -138,7 +138,8 @@ mre_all0 <- list.files(
 ) %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
-  filter(q_treatment == 'fixed' & ewaa == 'perfect' & fc != 0.15001 ) %>%
+  dplyr::select(-inputN) %>%
+  # filter(q_treatment == 'fixed' & ewaa == 'perfect' & fc != 0.15001 ) %>%
   distinct() ## drop old runs and duplicates
 
 ## check how many ran (should be 28 each)
@@ -146,19 +147,28 @@ summarise(mre_all0,
           nrep = n() / 71,
           .by = c(scenario, species, fc))
 
-## IDs of fails
-summarise(mre_all0,
+
+## IDs of fails to converge
+failed_to_converge <-mre_all0 %>%
+  filter(is.na(lower)) %>%
+  dplyr::select(scenario, replicate, species) %>%
+  distinct()
+
+## IDs of fails to execute
+failed_to_run <- summarise(mre_all0,
           nrep = n() / 71,
           .by = c(scenario, replicate, species)) %>%
   tidyr::complete(replicate, scenario, species) %>%
-  filter(is.na(nrep)) %>%
-  arrange(species, scenario, replicate) %>%
-  View()
+  filter(is.na(nrep)  | nrep <2  ) %>%
+  arrange(species, scenario, replicate)
 
-mre_all <- mre_all0 %>%
-  group_by(year, scenario, species, fc, inputN) %>%
+mre_all_filter <- mre_all0 %>%
+  filter(!(replicate %in% failed_to_run$replicate)) %>% ## drop fails across-the-board
+  filter(!(replicate %in% failed_to_converge$replicate)) ## drop fails across-the-board
+
+mre_all<- mre_all_filter %>%
+  group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
   summarize(
-    med2 = median(MRE_ssb*100),
     med  = median(MRE_scaled),
     lwr50 = quantile(MRE_scaled, .25),
     upr50 = quantile(MRE_scaled, .75),
@@ -166,7 +176,23 @@ mre_all <- mre_all0 %>%
     upr95 = quantile(MRE_scaled, .975)
   )
 
+
+mre_all <- mre_all_filter %>%
+  group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
+  mutate(MRE_scaled = MRE_ssb*100) %>%
+  summarize(
+    med = median(MRE_scaled),
+    lwr50 = quantile(MRE_scaled, .25),
+    upr50 = quantile(MRE_scaled, .75),
+    lwr95 = quantile(MRE_scaled, .0275),
+    upr95 = quantile(MRE_scaled, .975)
+  )
+
+mre_all$q_treatment <- factor(mre_all$q_treatment, levels = c('fixed','estimated'))
+mre_all$q_treatment[is.na(mre_all$q_treatment)] <- 'estimated'
+
 mre_all$ewaa <- factor(mre_all$ewaa, levels = c('perfect','averaged'))
+mre_all$ewaa[is.na(mre_all$ewaa)] <- 'perfect'
 mre_all$fc <- factor(mre_all$fc, levels = c(1, 0.15))
 
 for (spp in unique(mre_all$species)) {
@@ -186,7 +212,7 @@ for (spp in unique(mre_all$species)) {
     geom_ribbon(aes(ymin = lwr95, ymax = upr95),
                 alpha = 0.15,
                 color = NA) +
-    scale_y_continuous(limits = c(-60, 60), breaks = seq(-50, 50, 10)) +
+    # scale_y_continuous(limits = c(-60, 60), breaks = seq(-50, 50, 10)) +
     scale_fill_manual(values = scenPal, labels = scenLabs) +
     scale_color_manual(values = scenPal, labels = scenLabs) +
     labs(
@@ -197,7 +223,7 @@ for (spp in unique(mre_all$species)) {
     ) +
     # facet_wrap(   ~ fc, labeller = as_labeller(fcLabs), ncol = 1) +
 
-    facet_grid( fc ~ inputN) +
+    facet_grid( fc ~ ewaa + q_treatment) +
     theme(
       # legend.position = 'none',
       # strip.text.x = element_blank(),
@@ -218,7 +244,7 @@ for (spp in unique(mre_all$species)) {
   #   last_plot(),
   #   file = here(
   #     'figs',
-  #     paste0(Sys.Date(), '-', spp, '-MRE_by_scenario-95ci.png')
+  #     paste0(Sys.Date(), '-', spp, '-MRE_SSB_by_scenario-95ci.png')
   #   ),
   #   width = 4,
   #   height = 6,
@@ -525,7 +551,7 @@ waa_index <- list.files(
 
 for (spp in c(sppLabs2$Var2[sppLabs2$Var4])) {
   ggplot(
-    subset(waa_index, age == 4 &
+    subset(waa_index, age == 3 &
              year < 2081 & species == spp),
     aes(
       x = year,
@@ -543,20 +569,22 @@ for (spp in c(sppLabs2$Var2[sppLabs2$Var4])) {
     scale_color_manual(values = scenPal, labels = scenLabs) +
     theme(strip.background = element_blank()  ,
           legend.position = 'none') +
+    # facet_wrap(~age)+
     labs(
       x = 'Year',
-      y = 'EWAA @ ~50% maturity, kg',
+      y = 'EWAA @ 50% maturity, kg',
       color = '',
       fill = ''
     )
-  # ggsave(
-  #   last_plot(),
-  #   file = here('figs', paste0(Sys.Date(),'-ewaa4_by_scenario_95ci-', spp, '.png')),
-  #   width = 3,
-  #   height = 4,
-  #   unit = 'in',
-  #   dpi = 400
-  # )
+  ggsave(
+    last_plot(),
+    file = here('figs',
+                paste0(Sys.Date(),'-ewaa4_by_scenario_95ci-', spp, '.png')),
+    width = 3,
+    height = 4,
+    unit = 'in',
+    dpi = 400
+  )
 }
 
 #* input agecomps by scenario ----

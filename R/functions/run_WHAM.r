@@ -20,7 +20,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   ## subfolder with fractional coverage & ewaa used
   filen3 <- paste0("fractional_coverage=",
                    fractional_coverage_use,"_ewaa=",
-                   ewaa_use,"_q=",
+                   ewaa_use,
+                   "_q=",
                    q_treatment )
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
   if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
@@ -155,7 +156,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   if(mod_use$is_sdrep){
     q <-  ifelse(is.na(q_f(x = mod_use$opt$par['logit_q'])), 1, q_f(x = mod_use$opt$par['logit_q']))
     rpt <- mod_use$report()
-    rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
+    # rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
+    rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*1/52)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
@@ -191,13 +193,19 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
 
   # cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
   cat(median(abs(mre_table$MRE_scaled)),"\n")
+  cat(100*median(abs(mre_table$MRE_ssb  )),"\n")
+  mre_table %>% dplyr::select(year, ssb_true, ssb_est,
+                              total_biomass, totbio_est,
+                              MRE_ssb, MRE_totbio) %>%
+    head()
+
   # View(mre_table %>%
   #        dplyr::select(year, ssb_true,ssb_est,ssb_est_adj,
   #                                  total_biomass, totbio_est,totbio_est_adj,
   #                                  MRE_ssb,MRE_totbio,MRE_scaled,MRE_totbio_adj,q_est))
   ssb_compare <-  mre_table %>%
-    dplyr::select(year, total_biomass, totbio_est, lower, upper) %>%
-
+    # dplyr::select(year, total_biomass, totbio_est, lower, upper) %>%
+    dplyr::select(year, ssb_true, ssb_est, lower, upper) %>%
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
     geom_line() +
