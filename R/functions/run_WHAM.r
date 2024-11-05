@@ -30,6 +30,11 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   }
 
   ## load input data ----
+  spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
+                                 '/spawn_timing.csv')) %>%
+    filter(species == spname) %>%
+    dplyr::select(spawn_timing)
+
   mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
   catch_at_age <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_catch_at_age.csv'),  skip = 1)[1:length(yrs_use),]
@@ -57,8 +62,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$n_fleets <- 1 ## one fishing fleet
   asap3$dat$n_fleet_sel_blocks  <- 1 ## one fishing fleet
   asap3$dat$n_indices <- 1 ## one survey fleet
-  asap3$dat$n_WAA_mats <- 2 ## SSB and catch WAA
-  asap3$dat$WAA_pointers <- c(1,2,1,2,2,2) #catch, discards, total catch, total discards, ssb, jan1bio
+  asap3$dat$n_WAA_mats <- 2 ## catch WAA and SSB WAA
+  asap3$dat$WAA_pointers <- c(1,1,1,1,2,1) #catch, discards, total catch, total discards, ssb, jan1bio
   asap3$dat$index_units <- 1 ## 1 = biomass, 2 = numbers
   asap3$dat$index_acomp_units <- 2
   asap3$dat$index_month <- 7
@@ -69,6 +74,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # #* initial pars, phase, lambdas ----
   asap3$dat$N1_ini <- 0.5*as.matrix(N_init, nrow = 1) ## halve these for females only
   # asap3$dat$fracyr_spawn <- ifelse(spname=='AtlanticHerring',0.05,0.5)
+  asap3$dat$fracyr_spawn <- spawntiming
   # # asap3$dat$lambda_steepness
   # # asap3$dat$phase_steepness <- 2
   # # asap3$dat$q_ini
