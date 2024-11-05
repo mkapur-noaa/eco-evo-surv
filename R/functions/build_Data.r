@@ -35,7 +35,6 @@ build_Data<-function(scenario,
   file_suffix <- paste(spname,scen,repID2,sep = '-')
 
   ## where the raw evOsmose outputs are stored
-  dirtmp0 <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen)
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
   ## where the WHAM outputs are to be stored
@@ -68,19 +67,8 @@ build_Data<-function(scenario,
   }
   #
   if(fractional_coverage_use==1){
-    ## Spawn Timing ----
-    ## OSMOSE specifies the fraction of gonad energy available at timestep T.
-    ## find the most "intense" time of year and specify that as spawntime.
 
-    spawn_csv <- read.csv( paste0(dirtmp0,
-                                  '/repro_new_param/',
-                                  'reproduction-seasonality-sp',
-                                  sppIdx-1,".csv"))
 
-    write.table(spawn_csv[which.max(spawn_csv[,2]),1],
-                sep = ' ',
-                paste0(wham.dir,"/",file_suffix,'-spawntiming.csv'),
-                row.names = FALSE)
     ## LAA ----
     write.table(laa,
                 sep = ' ',
@@ -490,6 +478,12 @@ build_Data<-function(scenario,
     #*   population WAA ----
     ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
     ## we take this at midyear to match asap3$dat$fracyr_spawn, the fraction of year elapsed before SSB calculation
+    spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
+                                   '/spawn_timing.csv')) %>%
+      filter(species == spname) %>%
+      dplyr::select(spawn_timing) %>%
+      as.numeric(spawn_timing)
+
 
     waa_raw <- read.csv(header = T, skip = 1,
                     list.files(dirtmp, pattern = 'meanSizeDistribByAge*',
@@ -504,7 +498,7 @@ build_Data<-function(scenario,
 
     ## correct WAA for midyear (population)
     waa_perfect <- waa_raw %>%
-      filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## filter to spawntime
+      filter(avg_rescaled_time > (spawntiming-0.05) & avg_rescaled_time < (spawntiming+0.05)) %>% ## filter to spawntime
       group_by(year,Age) %>%
       summarise(mean_size_cm = mean(value)) %>% ## average size-at-age over year
       ungroup() %>%
