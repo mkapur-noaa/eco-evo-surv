@@ -143,6 +143,28 @@ ordered_reps <- ordered_reps0 %>%
 # }
 ## build and save parameter lookup tables ----
 
+
+## Spawn Timing ----
+## OSMOSE specifies the fraction of gonad energy available at timestep T.
+## find the most "intense" time of year and specify that as spawntime.
+## these don't vary by scenario even though pasted in each one
+# dirtmp0 <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/noCC_noEvo")
+# spawn_timing <- data.frame()
+# for(i in 1:15){
+# spawn_csv <- read.csv( paste0(dirtmp0,
+#                               '/repro_new_param/',
+#                               'reproduction-seasonality-sp',
+#                               i-1,".csv"))
+# spawn_timing[i,'speciesID'] <- i-1
+# spawn_timing[i,'species'] <- names(spawn_csv)[2]
+# spawn_timing[i,'spawn_timing'] <- spawn_csv[which.max(spawn_csv[,2]),1]
+# }
+# write.csv(spawn_timing,
+#             here::here('outputs','wham_runs','spawn_timing.csv'),
+#             row.names = FALSE)
+
+
+
 # parm_path <- "F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/cc_evo/ns_param-species.csv" ## stored once for all runs, not time-invariant
 
 
