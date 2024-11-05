@@ -33,7 +33,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
                                  '/spawn_timing.csv')) %>%
     filter(species == spname) %>%
-    dplyr::select(spawn_timing)
+    dplyr::select(spawn_timing) %>%
+    as.numeric(spawn_timing)
 
   mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
