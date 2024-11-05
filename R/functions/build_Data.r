@@ -35,6 +35,7 @@ build_Data<-function(scenario,
   file_suffix <- paste(spname,scen,repID2,sep = '-')
 
   ## where the raw evOsmose outputs are stored
+  dirtmp0 <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen)
   dirtmp <- paste0("F:/Ev-osmose/Ev-OSMOSE outputs_15April2024/",scen,'/output')
 
   ## where the WHAM outputs are to be stored
@@ -67,6 +68,20 @@ build_Data<-function(scenario,
   }
   #
   if(fractional_coverage_use==1){
+    ## Spawn Timing ----
+    ## OSMOSE specifies the fraction of gonad energy available at timestep T.
+    ## find the most "intense" time of year and specify that as spawntime.
+
+    spawn_csv <- read.csv( paste0(dirtmp0,
+                                  '/repro_new_param/',
+                                  'reproduction-seasonality-sp',
+                                  sppIdx-1,".csv"))
+
+    write.table(spawn_csv[which.max(spawn_csv[,2]),1],
+                sep = ' ',
+                paste0(wham.dir,"/",file_suffix,'-spawntiming.csv'),
+                row.names = FALSE)
+    ## LAA ----
     write.table(laa,
                 sep = ' ',
                 paste0(wham.dir,"/",file_suffix,'-laa.csv'),
@@ -97,6 +112,8 @@ build_Data<-function(scenario,
                   paste0(wham.dir,"/",file_suffix,'-wham_N_ini.csv'),
                   row.names = FALSE)
   } ## end if fractional_coverage_use == 1
+
+
 
   ## fishing mortality x age ----
   ## OSMOSE outputs the matrix of F by size by timestep, though it is invariant thru time, so just take first row
@@ -467,6 +484,8 @@ build_Data<-function(scenario,
                   paste0(wham.dir,"/",file_suffix,'-wham_catch_at_age.csv'),
                   row.names = FALSE)
 
+
+
     ## WAA matrices ----
     #*   population WAA ----
     ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
@@ -483,7 +502,7 @@ build_Data<-function(scenario,
              .by = c(year)) %>%
       mutate(avg_rescaled_time = mean(rescaled_time), .by = compressed_time) ## account for some rounding issues
 
-    ## get the correct waa
+    ## correct WAA for midyear (population)
     waa_perfect <- waa_raw %>%
       filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## filter to spawntime
       group_by(year,Age) %>%
@@ -505,7 +524,7 @@ build_Data<-function(scenario,
                 row.names = FALSE)
 
 
-    ## get the correct waa
+    ## year-round WAA (for catches)
     waa_averaged <- waa_raw %>%
       # filter(avg_rescaled_time > 0.39 & avg_rescaled_time < 0.44) %>% ## DO NOT filter to spawntime; average thru year
       group_by(year,Age) %>%
