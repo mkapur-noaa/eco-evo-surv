@@ -52,4 +52,3 @@ sample_ages <- function(df = cell_data, timestep=2010, long, lat,max_age_pop) {
   return(result)
   #return(data.frame(timestep = timestep, long = long, lat = lat, age = df$age, count = result))
 }
-
