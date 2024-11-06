@@ -33,8 +33,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
                                  '/spawn_timing.csv')) %>%
     filter(species == spname) %>%
-    dplyr::select(spawn_timing) %>%
-    as.numeric(spawn_timing)
+    dplyr::select(spawn_timing)
+  spawntiming<- as.numeric(spawntiming)
 
   mortality <- read.table(paste0(wham.dir,"/",file_suffix2,'-wham_mortality.csv'),  skip = 1)[1:length(yrs_use),]
   maturity <-read.table(paste0(wham.dir,"/",file_suffix2,'-wham_maturity.csv'),  skip = 1)[1:length(yrs_use),]
@@ -211,8 +211,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   #                                  total_biomass, totbio_est,totbio_est_adj,
   #                                  MRE_ssb,MRE_totbio,MRE_scaled,MRE_totbio_adj,q_est))
   ssb_compare <-  mre_table %>%
-    # dplyr::select(year, total_biomass, totbio_est, lower, upper) %>%
-    dplyr::select(year, ssb_true, ssb_est, lower, upper) %>%
+    dplyr::select(year, total_biomass, totbio_est, lower, upper) %>%
+    # dplyr::select(year, ssb_true, ssb_est, lower, upper) %>%
     reshape2::melt(id = c('year','lower','upper')) %>%
     ggplot(., aes(x = year, y = value/1e3, color = variable)) +
     geom_line() +
