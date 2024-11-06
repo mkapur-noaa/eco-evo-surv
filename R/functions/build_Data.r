@@ -180,8 +180,8 @@ build_Data<-function(scenario,
   spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
                                  '/spawn_timing.csv')) %>%
     filter(species == spname) %>%
-    dplyr::select(spawn_timing) %>%
-    as.numeric(spawn_timing)
+    dplyr::select(spawn_timing)
+  spawntiming<- as.numeric(spawntiming)
 
 
   waa_raw <- read.csv(header = T, skip = 1,
