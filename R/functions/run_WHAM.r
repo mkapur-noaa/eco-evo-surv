@@ -24,10 +24,10 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    "_q=",
                    q_treatment )
   wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
-  if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
-    cat(paste('already found outputs for ',file_suffix2,"\n"))
-    break()
-  }
+  # if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
+  #   cat(paste('already found outputs for ',file_suffix2,"\n"))
+  #   break()
+  # }
 
   ## load input data ----
   spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
@@ -64,7 +64,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$n_fleet_sel_blocks  <- 1 ## one fishing fleet
   asap3$dat$n_indices <- 1 ## one survey fleet
   asap3$dat$n_WAA_mats <- 2 ## catch WAA and SSB WAA
-  asap3$dat$WAA_pointers <- c(1,1,1,1,2,1) #catch, discards, total catch, total discards, ssb, jan1bio
+  asap3$dat$WAA_pointers <- c(1,1,1,1,1,1) #catch, discards, total catch, total discards, ssb, jan1bio
   asap3$dat$index_units <- 1 ## 1 = biomass, 2 = numbers
   asap3$dat$index_acomp_units <- 2
   asap3$dat$index_month <- 7
@@ -75,7 +75,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # #* initial pars, phase, lambdas ----
   asap3$dat$N1_ini <- 0.5*as.matrix(N_init, nrow = 1) ## halve these for females only
   # asap3$dat$fracyr_spawn <- ifelse(spname=='AtlanticHerring',0.05,0.5)
-  asap3$dat$fracyr_spawn <- spawntiming
+  # asap3$dat$fracyr_spawn <- spawntiming
   # # asap3$dat$lambda_steepness
   # # asap3$dat$phase_steepness <- 2
   # # asap3$dat$q_ini
@@ -163,8 +163,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   if(mod_use$is_sdrep){
     q <-  ifelse(is.na(q_f(x = mod_use$opt$par['logit_q'])), 1, q_f(x = mod_use$opt$par['logit_q']))
     rpt <- mod_use$report()
-    # rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
-    rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*1/52)*asap3$dat$WAA_mats[[1]])
+    rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*0.5)*asap3$dat$WAA_mats[[1]])
+    # rpt$total_biomass_est <- rowSums(rpt$NAA*exp(-rpt$ZAA*1/52)*asap3$dat$WAA_mats[[1]])
     std <- summary(mod_use$sdrep)
     ssb.ind <- which(rownames(std) == "log_SSB")[1:length(mod_use$years)]
     F.ind <- which(rownames(std) == "log_F")[1:length(mod_use$years)]
@@ -231,11 +231,12 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # scale_y_continuous(limits = c(0,1e-3*1.25*max(mre_table$ssb_true)))
 
   mre <- ggplot(mre_table, aes(x = year, y = MRE_scaled)) +
+    geom_hline(yintercept = 0, color = 'pink')+
     geom_line() +
     # scale_x_continuous(limits = c(2040,2099))+
     scale_y_continuous(limits = c(-50,50)) +
-    labs(x = 'Year', y = 'MRE Biomass, %')+
-    geom_hline(yintercept = 0, color = 'pink')
+    labs(x = 'Year', y = 'MRE Biomass, %')
+
 
   write.csv(mre_table,
             file = paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"),
