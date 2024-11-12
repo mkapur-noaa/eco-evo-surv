@@ -63,8 +63,8 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   asap3$dat$n_fleets <- 1 ## one fishing fleet
   asap3$dat$n_fleet_sel_blocks  <- 1 ## one fishing fleet
   asap3$dat$n_indices <- 1 ## one survey fleet
-  asap3$dat$n_WAA_mats <- 2 ## catch WAA and SSB WAA
-  asap3$dat$WAA_pointers <- c(1,1,1,1,1,1) #catch, discards, total catch, total discards, ssb, jan1bio
+  asap3$dat$n_WAA_mats <- 2 ## catch (averaged) WAA and SSB (narrowed) WAA
+  asap3$dat$WAA_pointers <- c(1,1,1,1,2,2)  #catch, discards, total catch, total discards, ssb, jan1bio
   asap3$dat$index_units <- 1 ## 1 = biomass, 2 = numbers
   asap3$dat$index_acomp_units <- 2
   asap3$dat$index_month <- 7
