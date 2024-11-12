@@ -75,7 +75,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   # #* initial pars, phase, lambdas ----
   asap3$dat$N1_ini <- 0.5*as.matrix(N_init, nrow = 1) ## halve these for females only
   # asap3$dat$fracyr_spawn <- ifelse(spname=='AtlanticHerring',0.05,0.5)
-  # asap3$dat$fracyr_spawn <- spawntiming
+  asap3$dat$fracyr_spawn <- spawntiming
   # # asap3$dat$lambda_steepness
   # # asap3$dat$phase_steepness <- 2
   # # asap3$dat$q_ini
