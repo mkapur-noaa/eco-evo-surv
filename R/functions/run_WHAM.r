@@ -3,7 +3,7 @@
 
 run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                     fractional_coverage_use = 1,
-                    ewaa = 'perfect', ## perfect or averaged
+                    ewaa_use = 'perfect', ## perfect or averaged
                     q_treatment = 'estimated', ## how q should be treated
                     inputN = 100, ## inputN for survey agecomps
                     file_suffix = NULL
@@ -139,7 +139,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
     m9 <- fit_wham(input9, do.osa = F) # turn off OSA residuals to save time
     check_convergence(m9)
     mod_use <- m9; input_use <- input9
-    mod_use$env$last.par.best
+    # mod_use$env$last.par.best
   } else if (fractional_coverage_use == 0.15001){
     input6 <- prepare_wham_input(asap3,
                                  recruit_model=2, ## (default) Random about mean, i.e. steepness = 1
@@ -193,7 +193,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
              MRE_totbio = (total_biomass - totbio_est)/total_biomass,
              MRE_scaled = 100*MRE_totbio,
              fc = fractional_coverage_use,
-             ewaa = ewaa_use,
+             ewaa=ewaa_use,
              q_treatment,
              inputN)
   }
