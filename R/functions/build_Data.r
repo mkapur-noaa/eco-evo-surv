@@ -44,8 +44,6 @@ build_Data<-function(scenario,
   # F:\ev-Osmose\w\EuropeanSprat-noCC_noEvo
   if(is.null(date.use)){
     wham.dir <- paste0(head.dir, '/rep',repID2); if(!dir.exists(wham.dir)) dir.create(wham.dir)
-    # if(!dir.exists(here::here(head.dir,Sys.Date()))) dir.create(here::here(head.dir,Sys.Date()))
-    # wham.dir <- here::here(head.dir,Sys.Date(),paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
   } else{
     wham.dir <- here::here(head.dir,date.use,paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
   }
@@ -58,9 +56,9 @@ build_Data<-function(scenario,
   total_area <- 632 ## total number of marine cells, aka dim (all_cells)
 
   ## load parameters for this species ----
-  lw_pars <- read.csv(here::here('outputs','wham_runs','length2weight.csv')) %>%  filter(species == spname)
-  max_age_pop <- read.csv(here::here('outputs','wham_runs','max_age.csv')) %>%  filter(species == spname)
-  vonBpars <- read.csv(here::here('outputs','wham_runs','vonBpars.csv')) %>%  filter(species == spname)
+  lw_pars <- read.csv(paste0(dirname(head.dir),"/",'length2weight.csv')) %>%  filter(species == spname)
+  max_age_pop <- read.csv(paste0(dirname(head.dir),"/",'max_age.csv')) %>%  filter(species == spname)
+  vonBpars <- read.csv(paste0(dirname(head.dir),"/",'vonBpars.csv')) %>%  filter(species == spname)
 
   #* populate length-at-age vector
   laa <- data.frame(length_cm = NA, age = NA, len_bin = NA)
@@ -180,7 +178,7 @@ build_Data<-function(scenario,
   #*   population WAA ----
   ## the WAA used to calculate SSB is given by the meanSizeDistribByAge csvs and the allometric w-L parameters in the model
   ## we take this at midyear to match asap3$dat$fracyr_spawn, the fraction of year elapsed before SSB calculation
-  spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
+  spawntiming <- read.csv(paste0(dirname(dirname(wham.dir)),
                                  '/spawn_timing.csv')) %>%
     filter(species == spname) %>%
     dplyr::select(spawn_timing)
@@ -366,7 +364,7 @@ build_Data<-function(scenario,
   # #* run survey ----
   # # Initialize an empty list to store the results
   results_age <- results_index <- results_index_gam <- list()
-  survey_array <- read.csv(here::here('outputs','wham_runs',
+  survey_array <- read.csv(paste0(dirname(head.dir),"/",
                                       paste0('2024-05-08-survey_array_',
                                              fractional_coverage_use,'.csv')))
 
