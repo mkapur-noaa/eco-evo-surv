@@ -48,7 +48,7 @@ build_Data<-function(scenario,
     wham.dir <- here::here(head.dir,date.use,paste0('rep',repID2)); if(!dir.exists(wham.dir)) dir.create(wham.dir)
   }
 
-  if(file.exists(paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use, '-wham_survey.csv'))){
+  if(file.exists(paste0(wham.dir,"/",file_suffix,'-',fractional_coverage_use, '-ssb_perfect.csv'))){
     cat(paste('already found outputs for ',file_suffix,"\n"))
     break()
   }
