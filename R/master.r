@@ -4,8 +4,9 @@
 ## maia.kapur@noaa.gov
 
 rm(list = ls()) ## clear workspace
+
 invisible(lapply(list.files(
-  here::here('R', 'functions'), full.names = TRUE
+  "C:/Users/maia.kapur/Work/projects/eco-evo-surv/R/functions", full.names = TRUE
 ), FUN = source)) ## load all functions and presets
 
 
@@ -24,18 +25,18 @@ cl <- makeCluster(cores)
 registerDoParallel(cl)
 
 foreach(scenario = 1:4) %:%
-  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)[2:4]) %:%
-  # foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
-  foreach(repl = c(1:27))  %dopar%  {
+  foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
+  # foreach(species = 1:4) %:%
+  foreach(repl = 24:28)  %dopar%  {
     invisible(lapply(list.files(
-      here::here('R', 'functions'), full.names = TRUE
+      "C:/Users/maia.kapur/Work/projects/eco-evo-surv/R/functions", full.names = TRUE
     ), FUN = source)) ## load all functions and presets
 
     scen_use = scenario
     sp_use = species
     replicate_use = repl
 
-    for (fc_use in c(1)) {
+    for (fc_use in c(1,0.15)) {
       build_Data(
         scenario = scen_use,
         sppIdx = sp_use,
@@ -52,7 +53,7 @@ foreach(scenario = 1:4) %:%
         # obs_error = NA, ## observation error for surveys
         units = 'biomass',
         units_scalar = 1,
-        date.use = "2024-07-09",
+        # date.use = "2024-07-09",
         do_GAM = FALSE
       )
     } ## end fractional coverage loop
@@ -64,67 +65,95 @@ stopCluster()
 
 #* check how many were made ----
 dat_files <-
-  list.files(here::here('outputs', 'wham_runs'),
+  list.files("F:/ev-OSMOSE/wham_runs_19Nov2024-backup",
              recursive = TRUE,
-             pattern = '*wham_survey.csv', full.names = TRUE) %>%
-  .[grepl('2024-07-09/rep', .)] %>%
+             pattern = '*ssb_perfect.csv', full.names = TRUE) %>%
+  .[grepl('rep', .)] %>%
   basename(.) %>%
-  gsub("-wham_survey.csv","",.) %>%
+  gsub("-ssb_perfect.csv","",.) %>%
   stringr::str_split_fixed(., "-", 4) %>%
   data.frame()
 
-## species, scenario should be 56 each
+## species, scenario should be 27 each
 dat_files %>%
-  summarise(n=n(), .by = c(X1,X2)) %>%
-  arrange(X1,n) %>%
-  filter(n!=56)
+  filter(X1 != 'Saithe') %>%
+  summarise(n=n(), .by = c(X3)) %>%
+  # arrange(X1,n) %>%
+  filter(n!=12)
+
+# dat_files %>%
+#   filter(X1== 'EuropeanSprat' & X2 == 'noCC_noEvo') %>%
+#   summarise(n=n(), .by = c(X3))
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-# greppy <- paste0('rep',c(0,"1\\b","2\\b",3,4,5), collapse = "|")
+# greppy <- paste0('rep',c("1\\b","2\\b",3,4,5), collapse = "|")
 # greppy <- paste0('rep',15:20, collapse = "|")
 
+ # files_to_run_done <-  c(files_to_run_done,files_to_run[1:10])
 files_to_run <-
-  list.dirs.depth.n(here::here('outputs', 'wham_runs'), n = 3) %>%
-  .[grepl('2024-07-09/rep', .)]  %>%
-  .[!grepl('Saithe',.)] #%>%
-  # .[grepl('Herring',.)] #%>%
+  # list.dirs.depth.n(here::here('outputs', 'wham_runs'), n = 3) %>%
+  list.dirs.depth.n("F:/EV-OSMOSE/wham_runs_19nov2024-backup", n = 2) %>%
+   .[grepl('rep', .)]  %>%
+# .[grepl('AtlanticCod',.)] #%>%
+  # .[grepl('Sprat',.)] #%>%
+  # .[grepl('Herring',.)] %>%
   # .[grepl(greppy, .)] %>%
-  # .[!grepl('noCC_noEvo', .)] %>%
-# .[grepl('\\bCC_Evo',.)] %>%
+# .[grepl('noCC_noEvo',.)] #%>%
+  .[!grepl('Saithe', .)] #%>%
+
+# .[grepl('\\bnoCC_noEvo',.)] #%>%
 # .[!grepl(paste(files_to_run_done,collapse ="|"), .)]
 
+dropme <- NULL ## this routine assumes you've cleared outdated runs
+for(i in seq_along(files_to_run)){
+  curr_dirs <- list.dirs(files_to_run[i], recursive = FALSE)
+  if(length(grep('mre.csv',list.files(files_to_run[i],recursive = TRUE))) == 0) {
+  # if(length(grep('retro',list.files(files_to_run[i],recursive = TRUE))) == 16) {
+    dropme <- c(dropme, i) ## if there are 8 files x 2 coverages
+  }
+}
 
-# files_to_run_done <- c(files_to_run_done, files_to_run[1:20])
-# file_suffix =file_use= files_to_run[2];yrs_use = 2010:2080;fractional_coverage_use=fc_use = 0.15
+files_to_run <- files_to_run[dropme]
+
+
+
+# file_suffix =file_use= files_to_run[1];
+# inputN=100;q_treatment='fixed';yrs_use = 2010:2080;
+# fractional_coverage_use=fc_use = 1; ewaa = 'perfect'
 
 cores <- detectCores() - 2
 cl <- makeCluster(cores)
 registerDoParallel(cl)
-# ,)
-foreach(file_use = files_to_run[c(77,197,321)]) %:%
-  foreach(ewaa_use = c('perfect','averaged')[2])  %:%
-  foreach(q_treatment_use = c('fixed','estimated')[2])  %:%
-  foreach(fc_use = c(1, 0.15)[2]) %dopar%  {
+
+foreach(file_use = files_to_run) %:%
+  foreach(fc_use = c(1, 0.15)) %dopar%  {
+    # setwd("C:/Users/maia.kapur/Work/projects/eco-evo-surv/")
+  # for (fc_use in c(1,0.15)) {
+
     invisible(lapply(list.files(
-      here::here('R', 'functions'), full.names = TRUE
+      "C:/Users/maia.kapur/Work/projects/eco-evo-surv/R/functions",
+      full.names = TRUE
     ), FUN = source)) ## load all functions and presets
 
     run_WHAM(
       yrs_use = 2010:2080,## years to run the assessment
       fractional_coverage_use = fc_use, ## which survey setup to read from
-      ewaa  = ewaa_use, ## which ewaa input to read from
-      q_treatment = q_treatment_use, ## testing only; whether or not Q is estimated
+      ewaa_use  = 'perfect', ## which ewaa input to read from
+      q_treatment = 'fixed', ## testing only; whether or not Q is estimated
       # inputN = ifelse(fc_use < 1, fc_use*100, 100), ## reduce inputN accordingly
       file_suffix = file_use
     )
-  } ## end dopar loop
+# }
+}
+  ## end dopar loop
+
 stopImplicitCluster()
 stopCluster()
 
 ## Summarize results across all species, scenarios, simulations ----
 
-#* MRE by rep, scenario, species ----
+#* Filter results ----
 # files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 4) %>%
 #   .[grepl('2024-05-16/rep',.)] %>%
 #   .[grepl('Herring',.)] %>%
@@ -136,50 +165,133 @@ mre_all0 <- list.files(
   recursive = TRUE,
   full.names = TRUE
 ) %>%
+  # .[grepl('2024-11*',.)] %>%
   lapply(., FUN = read.csv) %>%
   bind_rows() %>%
   dplyr::select(-inputN) %>%
-  # filter(q_treatment == 'fixed' & ewaa == 'perfect' & fc != 0.15001 ) %>%
+  filter(q_treatment == 'fixed'   & fc != 0.15001 ) %>%
   distinct() ## drop old runs and duplicates
 
-## check how many ran (should be 28 each)
+## check how many ran (should be 27 each)
 summarise(mre_all0,
-          nrep = n() / 71,
+          nrep = n() / 71, ## nyears
           .by = c(scenario, species, fc))
 
+tt <- summarise(mre_all0,
+          nrep = n() / 71,
+          .by = c(scenario, species, fc))
+(3*4*28*2)-sum(tt$nrep) ## number that failed total
+
+## confirm fails across all spp
+tt %>%
+  mutate(nfail = 28-nrep) %>%
+  filter(nfail >0) %>%
+  summarise(.,
+            n_with_fail =n(),
+            .by = c(scenario))
 
 ## IDs of fails to converge
-failed_to_converge <-mre_all0 %>%
+failed_to_converge <- mre_all0 %>%
   filter(is.na(lower)) %>%
   dplyr::select(scenario, replicate, species) %>%
   distinct()
+
 
 ## IDs of fails to execute
 failed_to_run <- summarise(mre_all0,
           nrep = n() / 71,
           .by = c(scenario, replicate, species)) %>%
   tidyr::complete(replicate, scenario, species) %>%
-  filter(is.na(nrep)  | nrep <2  ) %>%
+  filter(is.na(nrep)  ) %>%
   arrange(species, scenario, replicate)
 
 mre_all_filter <- mre_all0 %>%
   filter(!(replicate %in% failed_to_run$replicate)) %>% ## drop fails across-the-board
   filter(!(replicate %in% failed_to_converge$replicate)) ## drop fails across-the-board
 
-mre_all<- mre_all_filter %>%
-  group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
-  summarize(
-    med  = median(MRE_scaled),
-    lwr50 = quantile(MRE_scaled, .25),
-    upr50 = quantile(MRE_scaled, .75),
-    lwr95 = quantile(MRE_scaled, .0275),
-    upr95 = quantile(MRE_scaled, .975)
-  )
+length(unique(mre_all_filter$replicate)) ## how many unique replicates remained
+nrow(mre_all_filter)/71 ## final total number of unique models run
+
+## now re-build files_to_run after filter
+kept_reps <- paste0('rep',sort(unique(mre_all_filter$replicate)) )
+files_to_run_filter1 <- files_to_run[grep(paste(kept_reps, collapse= "|"),files_to_run)]
+
+# Diagnostics ----
+# devtools::install_github("jabbamodel/ss3diags")
+#* run's test ----
+## do run's test and examine >10x resid > 2
+
+models_filtered <- list.files(files_to_run_filter1,pattern='*_model.rdata', recursive = TRUE,
+                              full.names = TRUE)
+
+
+## placeholders for diag pass rates
+diags <- data.frame()
+
+for(i in seq_along(models_filtered)[1:4]){
+
+  ## populate data frame front matter
+  reppy <- as.numeric(gsub('rep','',basename(dirname(dirname(models_filtered[i])))))     ## yank the replicate
+  diags[i,'rep'] <- reppy
+  diags[i,'fc'] <- as.numeric(stringr::str_sub(basename(dirname(models_filtered[i])),21,-22))
+  diags[i,'scenario']  <- strsplit(basename(dirname(dirname(dirname(models_filtered[i])))),'-')[[1]][2]
+  diags[i,'species']  <- strsplit(basename(dirname(dirname(dirname(models_filtered[i])))),'-')[[1]][1]
+  diags[i,'runs_test']  <- NA
+
+
+  x <- try({
+    load(models_filtered[i], .GlobalEnv) ## will load as mod_use
+  })
+  if (!inherits(x, 'try-error')) next()
+  rep  <- mod_use$report()
+
+  ## do the run's test
+  resid <- data.frame(Obs = mod_use$env$data$agg_indices,
+                      Exp = rep$pred_indices) %>%
+    filter(Obs > 0 ) %>%
+    mutate(residuals = log(Obs)-log(Exp))
+  # devtools::install_github("jabbamodel/ss3diags")
+
+  runs_test<-ss3diags::ssruns_sig3(x=as.numeric(resid$residuals),type="resid")
+  diags[i,'runs_test_val']  <- runs_test$p.runs
+  diags[i,'runs_test_passed']  <- ifelse(runs_test$p.runs <= 0.05, FALSE, TRUE)
+
+  ## check the agecomp residuals, looking for > 10 outliers (>2)
+  # agecomp_resid <- merge(reshape2::melt(mod_use$env$data$catch_paa[1,,] ),
+  #                        reshape2::melt(rep$pred_catch_paa[,1,]) , by = c('Var1','Var2')) %>%
+  #   dplyr::select(year = Var1, age = Var2, Obs = value.x, Exp = value.y) %>%
+  #   mutate(pearson = (Exp-Obs)^2)
+  #
+  # diags[i,'age_pearson_val']  <-  sum(agecomp_resid$pearson > 2)
+  # diags[i,'age_pearson_passed']  <- ifelse( diags[i,'age_pearson_val']>=10,FALSE, TRUE)
+  write.csv(diags, file = here('outputs','summary_data',paste0(Sys.Date(),"-diags.csv")),
+            row.names = FALSE)
+}
+
+
+diags %>%
+  summarise(n_total = n(),
+            n_runs = sum(runs_test_passed),
+            n_comps  = sum(age_pearson_passed),
+            n_both = sum(runs_test_passed & age_pearson_passed),
+            .by = c('species','fc'))
+
+## finally drop individual models that failed either diagnostic
+
+# mre_all<- mre_all_filter %>%
+#   group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
+#   summarize(
+#     med  = median(MRE_scaled),
+#     lwr50 = quantile(MRE_scaled, .25),
+#     upr50 = quantile(MRE_scaled, .75),
+#     lwr95 = quantile(MRE_scaled, .0275),
+#     upr95 = quantile(MRE_scaled, .975)
+#   )
 
 
 mre_all <- mre_all_filter %>%
   group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
-  mutate(MRE_scaled = MRE_ssb*100) %>%
+  mutate(MRE_scaled = MRE_totbio*100) %>%
   summarize(
     med = median(MRE_scaled),
     lwr50 = quantile(MRE_scaled, .25),
@@ -196,6 +308,7 @@ mre_all$ewaa[is.na(mre_all$ewaa)] <- 'perfect'
 mre_all$fc <- factor(mre_all$fc, levels = c(1, 0.15))
 
 for (spp in unique(mre_all$species)) {
+  # spp =  unique(mre_all$species)
   # for(fcc in unique(mre_all$fc)){
   # ggplot(mre_all,
   ggplot(subset(mre_all,  species == spp),
@@ -212,7 +325,7 @@ for (spp in unique(mre_all$species)) {
     geom_ribbon(aes(ymin = lwr95, ymax = upr95),
                 alpha = 0.15,
                 color = NA) +
-    # scale_y_continuous(limits = c(-60, 60), breaks = seq(-50, 50, 10)) +
+    scale_y_continuous(limits = c(-60, 60), breaks = seq(-50, 50, 10)) +
     scale_fill_manual(values = scenPal, labels = scenLabs) +
     scale_color_manual(values = scenPal, labels = scenLabs) +
     labs(
@@ -240,17 +353,17 @@ for (spp in unique(mre_all$species)) {
   # Rmisc::multiplot(plotlist = list(plist[[1]],plist[[2]]), cols = 2)
   # dev.off()
 
-  # ggsave(
-  #   last_plot(),
-  #   file = here(
-  #     'figs',
-  #     paste0(Sys.Date(), '-', spp, '-MRE_SSB_by_scenario-95ci.png')
-  #   ),
-  #   width = 4,
-  #   height = 6,
-  #   unit = 'in',
-  #   dpi = 400
-  # )
+  ggsave(
+    last_plot(),
+    file = here(
+      'figs',
+      paste0(Sys.Date(), '-', spp, '-MRE_SSB_by_scenario-95ci.png')
+    ),
+    width = 4,
+    height = 6,
+    unit = 'in',
+    dpi = 400
+  )
 
 }
 
