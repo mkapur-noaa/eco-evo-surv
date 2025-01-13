@@ -58,7 +58,7 @@ sqrt(sum(pred_obs_surv$resid)/nrow(pred_obs_surv))
 ns_domain <- as.matrix(read.csv(here::here('data','northsea_latlong.csv')), ncol = 2)
 survey_1 <- read.csv(here::here('outputs','wham_runs','2024-05-08-survey_array_1.csv')) %>% filter(year == 2013)
 survey_15 <- read.csv(here::here('outputs','wham_runs','2024-05-08-survey_array_0.15.csv')) %>% filter(year == 2013)
-survey_30 <- read.csv(here::here('outputs','wham_runs','2024-05-08-survey_array_0.3.csv')) %>% filter(year == 2013)
+survey_05 <- read.csv(here::here('outputs','wham_runs','2024-05-08-survey_array_0.05.csv')) %>% filter(year == 2013)
 survey_50 <- read.csv(here::here('outputs','wham_runs','2024-05-08-survey_array_0.5.csv')) %>% filter(year == 2013)
 
 set.seed(731)
@@ -98,8 +98,8 @@ surv15 <- baseplot +
     x = 2, y = 50, size = 6
   )
 
-surv30 <- baseplot +
-  geom_point(data = survey_30, aes(x = lat, y = long), fill = 'blue', color = 'blue')+
+surv05 <- baseplot +
+  geom_point(data = survey_05, aes(x = lat, y = long), fill = 'blue', color = 'blue')+
   annotate(
     "text", label = "C)",
     x = 2, y = 50, size = 6
@@ -113,7 +113,7 @@ surv50 <- baseplot +
   )
 
 require(patchwork)
-surv1  | surv15  | surv30  | surv50
+surv1  | surv50 | surv15  | surv05
 
 ggsave(last_plot(),
        file = here('figs','manuscript','supplement_1.png'),
