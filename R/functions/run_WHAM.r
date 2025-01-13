@@ -6,10 +6,12 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                     ewaa_use = 'perfect', ## perfect or averaged
                     q_treatment = 'estimated', ## how q should be treated
                     inputN = 100, ## inputN for survey agecomps
-                    file_suffix = NULL
-){
+                    file_suffix = NULL){
 
-  filen2 <- basename(dirname(dirname(file_suffix)))
+  # return(file_suffix)
+  # setwd("C:/Users/maia.kapur/Work/projects/eco-evo-surv/")
+  filen2 <- basename(dirname(file_suffix))
+  # filen2 <- basename(dirname(dirname(file_suffix)))
   scen <-   strsplit(filen2,'-')[[1]][2]
   repID2 <- as.numeric(gsub('rep','',basename(file_suffix)))
   spname <-   strsplit(filen2,'-')[[1]][1]
@@ -23,14 +25,16 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
                    ewaa_use,
                    "_q=",
                    q_treatment )
-  wham.dir.save <- paste0(file_suffix,"/",filen3); if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
+  wham.dir.save <- paste0(file_suffix,"/",filen3);
+  if(!dir.exists(wham.dir.save)) dir.create(wham.dir.save)
   # if(file.exists(paste0(wham.dir.save,"/",Sys.Date(),"-",file_suffix2,"-mre.csv"))){
-  #   cat(paste('already found outputs for ',file_suffix2,"\n"))
-  #   break()
-  # }
+  if(length(list.files(wham.dir.save, pattern="*mre.csv"))!=0){ ## skip if done at all
+    cat(paste('already found outputs for ',wham.dir.save,"\n"))
+    break()
+  }
 
   ## load input data ----
-  spawntiming <- read.csv(paste0(dirname(dirname( dirname(wham.dir))),
+  spawntiming <- read.csv(paste0(dirname( dirname(wham.dir)),
                                  '/spawn_timing.csv')) %>%
     filter(species == spname) %>%
     dplyr::select(spawn_timing)
@@ -48,7 +52,7 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
 
   ## load asap3-style data file ----
   #  copy templated asap3 data file to working directory
-  file.copy(from=file.path(here::here('osmose_wham_template.dat')),
+  file.copy(from="C:/Users/maia.kapur/Work/projects/eco-evo-surv/osmose_wham_template.dat",
             to=wham.dir, overwrite=TRUE)
   # read asap3 data file and convert to input list for wham
   setwd(wham.dir)
@@ -199,12 +203,12 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
   }
 
   # cat(mean(mre_table$ssb_est/mre_table$ssb_true),"\n")
-  cat(median(abs(mre_table$MRE_scaled)),"\n")
-  cat(100*median(abs(mre_table$MRE_ssb  )),"\n")
-  mre_table %>% dplyr::select(year, ssb_true, ssb_est,
-                              total_biomass, totbio_est,
-                              MRE_ssb, MRE_totbio) %>%
-    head()
+  # cat(median(abs(mre_table$MRE_scaled)),"\n")
+  # cat(100*median(abs(mre_table$MRE_ssb  )),"\n")
+  # mre_table %>% dplyr::select(year, ssb_true, ssb_est,
+  #                             total_biomass, totbio_est,
+  #                             MRE_ssb, MRE_totbio) %>%
+  #   head()
 
   # View(mre_table %>%
   #        dplyr::select(year, ssb_true,ssb_est,ssb_est_adj,
@@ -249,9 +253,9 @@ run_WHAM <-function(yrs_use = 2010:2080, ## years to run the assessment
 
 
   # WHAM output plots for best model with projections ----
-  plot_wham_output(mod=mod_use,
-                   res = 250,
-                   dir.main = wham.dir.save)
+  # plot_wham_output(mod=mod_use,
+  #                  res = 250,
+  #                  dir.main = wham.dir.save)
 
 }
 
