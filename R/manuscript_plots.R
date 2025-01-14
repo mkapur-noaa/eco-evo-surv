@@ -2,9 +2,7 @@
 ## assumes you have mre_all with final results (including survey data & diagnostics)
 
 ## build plotting summaries
-mre_all_filt <- mre_all %>% filter(runs_test_passed)  ## drop failed diagnostics
-
-bobs <- mre_all_filt %>%
+bobs <- full_df %>%
   filter(fc == 1) %>% ## OM biomass is identical regardles of coverage
   mutate(ssb_true = ssb_true/1000) %>%
   group_by(year, scenario, species, fc) %>%
@@ -16,18 +14,19 @@ bobs <- mre_all_filt %>%
     upr95 = quantile(ssb_true, .975)
   )
 
-sobs <- mre_all_filt %>%
+sobs <- full_df %>%
   filter(!is.na(Obs)) %>%
   group_by(year, scenario, species, fc) %>%
+  mutate(Obs = Obs/1000) %>%
   dplyr::summarize(
     med = median(Obs),
-    lwr80 = quantile(Obs, .10),
-    upr80 = quantile(Obs, .90),
+    lwr80 = med-med*quantile(abund_cv, .10),
+    upr80 = med+med*quantile(abund_cv, .90),
     lwr95 = quantile(Obs, .0275),
     upr95 = quantile(Obs, .975)
   )
 
-mre_summary <- mre_all_filt %>%
+mre_summary <- full_df %>%
   group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
   mutate(MRE_scaled = MRE_totbio*100) %>%
   summarize(
@@ -40,56 +39,59 @@ mre_summary <- mre_all_filt %>%
 
 
 
+## Figure X1. OM Maps, WAA and M
+
+
 ## Figure X1. OM SB, 1.0 Survey Obs, and EWAA by SPP ----
 
-#* OM Biomass ----
-ggplot(bobs, aes(x= year, y = med, color = scenario, fill = scenario)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = lwr80, ymax = upr80), alpha = 0.5, color = NA) +
-  facet_grid(~species) +
-  scale_fill_manual(values = scenPal, labels = scenLabs) +
-  scale_color_manual(values = scenPal, labels = scenLabs) +
-  facet_wrap( ~ species, scales = 'free_y', labeller = as_labeller(sppLabs)) +
-  labs(
-    x = 'Year',
-    y = 'True SSB (kmt)',
-    color = '',
-    fill = ''
-  ) +
-  theme(legend.position = 'none')
 
-#* survey observations, perfect coverage ----
-ggplot(subset(sobs, fc == 1),   aes( x = year,   y = med ,  group = interaction(scenario),
-         fill = scenario,
-         color = scenario
-       )) +
-  geom_point() +
-  geom_errorbar( aes(  ymin = med - 0.05 * med,    ymax =   med + 0.05 * med, color = scenario), alpha = 0.2,  width = 0  ) +
-  scale_fill_manual(values = scenPal, labels = scenLabs) +
-  scale_color_manual(values = scenPal, labels = scenLabs) +
+dobs <- bobs %>%
+  mutate(variable = 'True OM Biomass') %>%
+  rbind(., sobs %>% mutate(variable = 'Observed Survey Biomass')) %>%
+  arrange(species, variable, fc)
 
-  theme(strip.background = element_blank()  ,
-        legend.position = 'none') +
-  labs(x = 'Year',y = 'Survey Biomass (kmt)', color = '', fill = '') +
-  facet_wrap(~ species,
-             scales = 'free_y',
-             labeller = as_labeller(sppLabs))
+dobs$variable <- factor(dobs$variable,levels = c('True OM Biomass',
+                                                 'Observed Survey Biomass'))
+dobs$fc <- factor(dobs$fc,levels = c(1.01,1,0.15,.5,0.05))
+dobs$fc[dobs$variable=='True OM Biomass']<- 1.01
 
-#* survey observations, 15% coverage ----
-ggplot(subset(sobs, fc == 0.15),   aes( x = year,   y = med ,  group = interaction(scenario),
-                                     fill = scenario,
-                                     color = scenario)) +
-  geom_point() +
-  geom_errorbar( aes( ymin = lwr80,  ymax =  upr80, color = scenario ), alpha = 0.2, width = 0) +
-  scale_fill_manual(values = scenPal, labels = scenLabs) +
-  scale_color_manual(values = scenPal, labels = scenLabs) +
+tibble(dobs) %>%
+  filter(fc %in% c(1.01,1,0.15) ) %>%
+  group_split(species) %>%
+  purrr::map({
+    ~ggplot(.x, aes( x = year,   y = med ,  group = interaction(scenario),
+                     fill = scenario,
+                     color = scenario)) +
+      # geom_point() +
+      geom_line() +
 
-  theme(strip.background = element_blank()  ,
-        legend.position = 'none') +
-  labs(x = 'Year',y = 'Survey Biomass (kmt)', color = '', fill = '') +
-  facet_wrap(~ species,
-             scales = 'free_y',
-             labeller = as_labeller(sppLabs))
+      # geom_errorbar( aes( ymin = lwr80,  ymax =  upr80, color = scenario ), alpha = 0.2, width = 0) +
+
+      geom_ribbon(aes(ymin = lwr80, ymax = upr80), alpha = 0.2, color = NA) +
+      # scale_fill_manual(values = scenPal, labels = scenLabs) +
+      # scale_color_manual(values = scenPal, labels = scenLabs) +
+      theme(strip.background = element_blank()) +
+      theme(legend.position = 'none')+
+      # theme(axis.title.y = element_blank())+
+      labs(x = 'Year',y = '1000 mt', color = '', fill = '') +
+      facet_grid(species ~ variable + fc,
+                 # ncol = 2,
+                 # scales = 'free',
+                 labeller = labeller(species = sppLabs, fc = fcLabs))
+  }) %>%
+  patchwork::wrap_plots(ncol = 1, guides = 'collect') &
+  guides(fill=guide_legend(nrow=1,byrow=TRUE),
+         color =guide_legend(nrow=1,byrow=TRUE)) &
+  theme(legend.position = 'bottom') &
+  scale_fill_manual(values = scenPal, labels = scenLabs) &
+  scale_color_manual(values = scenPal, labels = scenLabs)
+
+
+ggsave(last_plot(),
+       file = here::here('figs','Figure3.png'),
+       width = 10, height = 10, dpi = 500, unit = 'in')
+
+
 
 ## MRE, perfect coverage
 ggplot(subset(mre_summary,  fc %in% c(0.15,1)),
@@ -115,7 +117,7 @@ ggplot(subset(mre_summary,  fc %in% c(0.15,1)),
     color = '',
     fill = ''
   ) +
-  facet_grid( fc ~ species) +
+  facet_grid( species ~ fc) +
   theme(axis.title = element_blank()
   )
 
