@@ -63,17 +63,23 @@ tibble(tabund_spatial) %>%
                    fill = abundance_rescale_year)) +
       theme_void() +
       geom_raster() +
+      theme(strip.text.y = element_text(angle = 270))+
       facet_grid(species ~ scenario ,
-                 labeller = labeller(species = sppLabs, scenario =  scenLabs))
+                 labeller = labeller(species = sppLabs,
+                                     scenario =  scenLabs))
 
   }) %>%
   patchwork::wrap_plots(ncol = 1, guides = 'collect') &
   # guides(fill=guide_legend(nrow=1,byrow=TRUE),
   #        color =guide_legend(nrow=1,byrow=TRUE)) &
   theme(legend.position = 'bottom') &
-  labs(fill = 'relative abundance year 2040')
-  scale_fill_manual(values = scenPal, labels = scenLabs) &
-  scale_color_manual(values = scenPal, labels = scenLabs)
+  labs(fill = 'relative abundance in year 2040') &
+  # scale_fill_gradientn(colours = rev(scenPal)) &
+  scale_fill_gradientn(colours = c("#95cec7","#2a9d8f","#e9c46a","#f4a261","#e76f51"))
+
+ggsave(last_plot(),
+       file = here::here('figs','Figure1.png'),
+       width = 10, height = 10, dpi = 500, unit = 'in')
 
 
 waa_index <- list.files(
@@ -89,49 +95,43 @@ waa_index <- list.files(
   group_by(year, scenario, species, age) %>%
   summarize(
     med = median(weight_kg),
-    lwr50 = quantile(weight_kg, .25),
-    upr50 = quantile(weight_kg, .75),
+    lwr80 = quantile(weight_kg, .1),
+    upr80 = quantile(weight_kg, .90),
     lwr95 = quantile(weight_kg, .0275),
     upr95 = quantile(weight_kg, .975)
   )
 
-for (spp in c(sppLabs2$Var2[sppLabs2$Var4])) {
-  ggplot(
-    subset(waa_index, age == 3 &
-             year < 2081 & species == spp),
-    aes(
+
+tibble(waa_index) %>%
+  filter(age == 3 & year < 2081) %>%
+group_split(species) %>%
+  purrr::map({
+    ~ggplot(.x,aes(
       x = year,
       y = med,
       group = interaction(scenario),
       fill = scenario,
       color = scenario
     )
-  ) +
-    geom_line() +
-    geom_ribbon(aes(ymin = lwr50, ymax = upr50),
-                alpha = 0.2,
-                color = NA) +
-    scale_fill_manual(values = scenPal, labels = scenLabs) +
-    scale_color_manual(values = scenPal, labels = scenLabs) +
-    theme(strip.background = element_blank()  ,
-          legend.position = 'none') +
-    # facet_wrap(~age)+
-    labs(
-      x = 'Year',
-      y = 'EWAA @ 50% maturity, kg',
-      color = '',
-      fill = ''
-    )
-  ggsave(
-    last_plot(),
-    file = here('figs',
-                paste0(Sys.Date(),'-ewaa4_by_scenario_95ci-', spp, '.png')),
-    width = 3,
-    height = 4,
-    unit = 'in',
-    dpi = 400
-  )
-}
+    ) +
+      geom_line() +
+      geom_ribbon(aes(ymin = lwr80, ymax = upr80),
+                  alpha = 0.2,
+                  color = NA) +
+      scale_fill_manual(values = scenPal, labels = scenLabs) +
+      scale_color_manual(values = scenPal, labels = scenLabs) +
+      theme(strip.background = element_blank()  ,
+            legend.position = 'none') +
+      facet_grid(species~.)+
+      labs(
+        x = 'Year',
+        y = 'EWAA @ 50% maturity, kg',
+        color = '',
+        fill = ''
+      )
+
+  }) %>%
+  patchwork::wrap_plots(ncol = 1, guides = 'collect')
 
 ## Figure X1. OM SB, 1.0 Survey Obs, and EWAA by SPP ----
 
