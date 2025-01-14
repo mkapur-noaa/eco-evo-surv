@@ -58,11 +58,12 @@ sppLabs2 <- data.frame(Var1 = sppLabs,
                   Var2=names(sppLabs),
                   Var3 = 0:(length(sppLabs)-1),
                   Var4 = FALSE)
-sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,8)] <- c('MidForage','BaseForage','Predator2') ## mask names for spp
+sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,8)] <- c('Mid Trophic','Base Trophic','High Trophic') ## mask names for spp
 sppLabs2$Var4[sppLabs2$Var3%in%c(0,3,8)] <- TRUE ## indicate spp of interest
 sppLabs[sppLabs2$Var3%in%c(0,3,8)] <- sppLabs2$Var5[sppLabs2$Var3%in%c(0,3,8)] ## mask names for spp
 
-
+fcLabs <- c(paste0(100*c(0.05,0.15,0.5,1.0),"% survey coverage"),"")
+names(fcLabs ) <-c(0.05,0.15,0.5,1.0,1.01)
 ## color palettes ----
 scenPal <- c('#a00000','#d8a6a6','#9fc8c8','#298c8c') ## four scenario colors: reds have climate change, blues do not
 
