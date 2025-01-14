@@ -1,7 +1,7 @@
 ## Figures for manuscript & supplementary material
 ## assumes you have mre_all with final results (including survey data & diagnostics)
 
-## build plotting summaries
+## build plotting summaries ----
 bobs <- full_df %>%
   filter(fc == 1) %>% ## OM biomass is identical regardles of coverage
   mutate(ssb_true = ssb_true/1000) %>%
@@ -31,15 +31,16 @@ mre_summary <- full_df %>%
   mutate(MRE_scaled = MRE_totbio*100) %>%
   summarize(
     med = median(MRE_scaled),
-    lwr50 = quantile(MRE_scaled, .25),
-    upr50 = quantile(MRE_scaled, .75),
+    lwr80 = quantile(MRE_scaled, 0.1),
+    upr80 = quantile(MRE_scaled, 0.9),
     lwr95 = quantile(MRE_scaled, .0275),
     upr95 = quantile(MRE_scaled, .975)
   )
+mre_summary$fc <- factor(mre_summary$fc,levels = c(1.01,1,0.15,.5,0.05))
 
 
 
-## Figure X1. OM Maps, WAA and M ----
+## Figure 1. OM Maps ----
 files_to_plot <- files_to_run[grepl('rep0',files_to_run)]
 tabund_spatial <- list.files(
   files_to_plot,
@@ -55,7 +56,7 @@ tabund_spatial <- list.files(
   )
 
 
-tibble(tabund_spatial) %>%
+maps <- tibble(tabund_spatial) %>%
   filter(year %in% c( 2040))  %>%
   group_split(species) %>%
   purrr::map({
@@ -81,14 +82,13 @@ ggsave(last_plot(),
        file = here::here('figs','Figure1.png'),
        width = 10, height = 10, dpi = 500, unit = 'in')
 
-
+## Figure 2. OM  WAA  ----
 waa_index <- list.files(
   files_to_run,
   pattern = 'wham_waa_ssb_perfect.csv',
   recursive = TRUE,
   full.names = TRUE
 ) %>%
-  # .[grepl('rep0',.)] %>%
   lapply(., FUN = strip_waa) %>%
   bind_rows() %>%
   filter(!is.na(weight_kg)) %>%
@@ -99,12 +99,54 @@ waa_index <- list.files(
     upr80 = quantile(weight_kg, .90),
     lwr95 = quantile(weight_kg, .0275),
     upr95 = quantile(weight_kg, .975)
-  )
+  ) %>%
+  mutate(variable = 'waa')
+
+mataa_index <- list.files(
+  files_to_run,
+  pattern = 'wham_maturity.csv',
+  recursive = TRUE,
+  full.names = TRUE
+) %>%
+  lapply(., FUN = strip_waa) %>%
+  bind_rows() %>%
+  filter(!is.na(weight_kg)) %>%
+  group_by(year, scenario, species, age) %>%
+  summarize(
+    med = median(weight_kg),
+    lwr80 = quantile(weight_kg, .1),
+    upr80 = quantile(weight_kg, .90),
+    lwr95 = quantile(weight_kg, .0275),
+    upr95 = quantile(weight_kg, .975)
+  )%>%
+  mutate(variable = 'maturity')
 
 
-tibble(waa_index) %>%
+maa_index <- list.files(
+  files_to_run,
+  pattern = 'wham_mortality.csv',
+  recursive = TRUE,
+  full.names = TRUE
+) %>%
+  lapply(., FUN = strip_waa) %>%
+  bind_rows() %>%
+  filter(!is.na(weight_kg)) %>%
+  group_by(year, scenario, species, age) %>%
+  summarize(
+    med = median(weight_kg),
+    lwr80 = quantile(weight_kg, .1),
+    upr80 = quantile(weight_kg, .90),
+    lwr95 = quantile(weight_kg, .0275),
+    upr95 = quantile(weight_kg, .975)
+  )%>%
+  mutate(variable = 'mortality')
+
+
+
+
+tibble(bind_rows(waa_index)) %>%
   filter(age == 3 & year < 2081) %>%
-group_split(species) %>%
+  group_split(species) %>%
   purrr::map({
     ~ggplot(.x,aes(
       x = year,
@@ -120,9 +162,14 @@ group_split(species) %>%
                   color = NA) +
       scale_fill_manual(values = scenPal, labels = scenLabs) +
       scale_color_manual(values = scenPal, labels = scenLabs) +
-      theme(strip.background = element_blank()  ,
-            legend.position = 'none') +
-      facet_grid(species~.)+
+      theme(strip.background = element_blank(),
+            legend.position = 'bottom') +
+
+      guides(fill=guide_legend(nrow=1,byrow=TRUE),
+             color =guide_legend(nrow=1,byrow=TRUE))+
+      facet_grid(species ~ scenario ,
+                 labeller = labeller(species = sppLabs,
+                                     scenario =  scenLabs))+
       labs(
         x = 'Year',
         y = 'EWAA @ 50% maturity, kg',
@@ -131,9 +178,16 @@ group_split(species) %>%
       )
 
   }) %>%
-  patchwork::wrap_plots(ncol = 1, guides = 'collect')
+  patchwork::wrap_plots(ncol = 1, guides = 'collect') &
+  theme(legend.position = 'bottom')
 
-## Figure X1. OM SB, 1.0 Survey Obs, and EWAA by SPP ----
+
+ggsave(last_plot(),
+       file = here::here('figs','Figure2.png'),
+       width = 10, height = 10, dpi = 500, unit = 'in')
+
+
+## Figure 3. OM SB & Survey Obs ----
 
 
 dobs <- bobs %>%
@@ -184,7 +238,38 @@ ggsave(last_plot(),
 
 
 
-## MRE, perfect coverage
+## Figure 4. MRE ----
+
+
+tibble(mre_summary) %>%
+  filter(fc %in% c(1.01,1,0.15) ) %>%
+  group_split(species) %>%
+  purrr::map({
+    ~ggplot(.x, aes( x = year,   y = med ,  group = interaction(scenario),
+                     fill = scenario,
+                     color = scenario)) +
+      geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey80')+
+
+      geom_line() +
+      geom_ribbon(aes(ymin = lwr80, ymax = upr80), alpha = 0.2, color = NA) +
+      theme(strip.background = element_blank()) +
+      theme(legend.position = 'none')+
+      labs(x = 'Year',y = 'Median Relative Error', color = '', fill = '') +
+      facet_grid(species ~ fc,
+                 labeller = labeller(species = sppLabs, fc = fcLabs))
+  }) %>%
+  patchwork::wrap_plots(ncol = 1, guides = 'collect') &
+  guides(fill=guide_legend(nrow=1,byrow=TRUE),
+         color =guide_legend(nrow=1,byrow=TRUE)) &
+  theme(legend.position = 'bottom') &
+  scale_fill_manual(values = scenPal, labels = scenLabs) &
+  scale_color_manual(values = scenPal, labels = scenLabs)
+
+
+ggsave(last_plot(),
+       file = here::here('figs','Figure4.png'),
+       width = 10, height = 10, dpi = 500, unit = 'in')
+
 ggplot(subset(mre_summary,  fc %in% c(0.15,1)),
        aes(
          x = year,
@@ -212,5 +297,79 @@ ggplot(subset(mre_summary,  fc %in% c(0.15,1)),
   theme(axis.title = element_blank()
   )
 
+## Supplementary Figures ----
+#* Survey Obs for add'l runs ----
 
+tibble(dobs) %>%
+  filter(fc %in% c(1.01,0.5,0.05) ) %>%
+  group_split(species) %>%
+  purrr::map({
+    ~ggplot(.x, aes( x = year,   y = med ,  group = interaction(scenario),
+                     fill = scenario,
+                     color = scenario)) +
+      # geom_point() +
+      geom_line() +
+
+      # geom_errorbar( aes( ymin = lwr80,  ymax =  upr80, color = scenario ), alpha = 0.2, width = 0) +
+
+      geom_ribbon(aes(ymin = lwr80, ymax = upr80), alpha = 0.2, color = NA) +
+      # scale_fill_manual(values = scenPal, labels = scenLabs) +
+      # scale_color_manual(values = scenPal, labels = scenLabs) +
+      theme(strip.background = element_blank()) +
+      theme(legend.position = 'none')+
+      # theme(axis.title.y = element_blank())+
+      labs(x = 'Year',y = '1000 mt', color = '', fill = '') +
+      facet_grid(species ~ variable + fc,
+                 # ncol = 2,
+                 # scales = 'free',
+                 labeller = labeller(species = sppLabs, fc = fcLabs))
+  }) %>%
+  patchwork::wrap_plots(ncol = 1, guides = 'collect') &
+  guides(fill=guide_legend(nrow=1,byrow=TRUE),
+         color =guide_legend(nrow=1,byrow=TRUE)) &
+  theme(legend.position = 'bottom') &
+  scale_fill_manual(values = scenPal, labels = scenLabs) &
+  scale_color_manual(values = scenPal, labels = scenLabs)
+
+
+ggsave(last_plot(),
+       file = here::here('figs','FigureS3.png'),
+       width = 10, height = 10, dpi = 500, unit = 'in')
+#* MRE for add'l runs ----
+
+tibble(dobs) %>%
+  filter(fc %in% c(1.01,1,0.15) ) %>%
+  group_split(species) %>%
+  purrr::map({
+    ~ggplot(.x, aes( x = year,   y = med ,  group = interaction(scenario),
+                     fill = scenario,
+                     color = scenario)) +
+      # geom_point() +
+      geom_line() +
+
+      # geom_errorbar( aes( ymin = lwr80,  ymax =  upr80, color = scenario ), alpha = 0.2, width = 0) +
+
+      geom_ribbon(aes(ymin = lwr80, ymax = upr80), alpha = 0.2, color = NA) +
+      # scale_fill_manual(values = scenPal, labels = scenLabs) +
+      # scale_color_manual(values = scenPal, labels = scenLabs) +
+      theme(strip.background = element_blank()) +
+      theme(legend.position = 'none')+
+      # theme(axis.title.y = element_blank())+
+      labs(x = 'Year',y = '1000 mt', color = '', fill = '') +
+      facet_grid(species ~ variable + fc,
+                 # ncol = 2,
+                 # scales = 'free',
+                 labeller = labeller(species = sppLabs, fc = fcLabs))
+  }) %>%
+  patchwork::wrap_plots(ncol = 1, guides = 'collect') &
+  guides(fill=guide_legend(nrow=1,byrow=TRUE),
+         color =guide_legend(nrow=1,byrow=TRUE)) &
+  theme(legend.position = 'bottom') &
+  scale_fill_manual(values = scenPal, labels = scenLabs) &
+  scale_color_manual(values = scenPal, labels = scenLabs)
+
+
+ggsave(last_plot(),
+       file = here::here('figs','Figure3.png'),
+       width = 10, height = 10, dpi = 500, unit = 'in')
 
