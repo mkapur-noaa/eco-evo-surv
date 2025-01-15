@@ -46,7 +46,7 @@ parse_Outputs <- function(files_to_run){
   ## do run's test and examine >10x resid > 2
 
   models_filtered <- list.files(files_to_run_filter1,pattern='*_model.rdata', recursive = TRUE,
-                                full.names = TRUE)[406:896]
+                                full.names = TRUE)
 
 
   ## placeholders for diag pass rates
@@ -105,11 +105,11 @@ parse_Outputs <- function(files_to_run){
     # setTxtProgressBar(pb,i)
 
   }
-  close(pb)
+  # close(pb)
   ## bind new data frames, this is not filtered by diags
   full_df <- merge(mre_all_filter0, survey_exp,
-        by = c('replicate','scenario','species', 'year', 'fc'), all.x = TRUE) %>%
-    merge(., diags,  by = c('replicate','scenario','species',  'fc') )
+        by = c('replicate','scenario','species', 'year', 'fc'), all = TRUE) %>%
+    merge(., diags,  by = c('replicate','scenario','species',  'fc'), all = TRUE )
 
 
   full_df$q_treatment <- factor(full_df$q_treatment, levels = c('fixed','estimated'))
@@ -118,8 +118,14 @@ parse_Outputs <- function(files_to_run){
   full_df$ewaa <- factor(full_df$ewaa, levels = c('perfect','averaged'))
   full_df$ewaa[is.na(full_df$ewaa)] <- 'perfect'
   # full_df$fc <- factor(full_df$fc, levels = c(1, 0.15))
+
+  write.csv(full_df,
+            file = here::here('outputs','summary_data',paste0(Sys.Date(),"-full_df_unfiltered.csv")),
+            row.names = FALSE)
+
   return(full_df)
 }
+
 
 # full_df %>%
 #   filter(runs_test_passed & !is.na(Obs)) %>%
