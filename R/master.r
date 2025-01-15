@@ -27,7 +27,7 @@ registerDoParallel(cl)
 foreach(scenario = 1:4) %:%
   foreach(species = c(sppLabs2$Var3[sppLabs2$Var4] + 1)) %:%
   # foreach(species = 1:4) %:%
-  foreach(repl = 24:28)  %dopar%  {
+  foreach(repl = 2:10)  %dopar%  {
     invisible(lapply(list.files(
       "C:/Users/maia.kapur/Work/projects/eco-evo-surv/R/functions", full.names = TRUE
     ), FUN = source)) ## load all functions and presets
@@ -36,7 +36,7 @@ foreach(scenario = 1:4) %:%
     sp_use = species
     replicate_use = repl
 
-    for (fc_use in c(1,0.15)) {
+    for (fc_use in c(0.05,0.5)) {
       build_Data(
         scenario = scen_use,
         sppIdx = sp_use,
@@ -87,8 +87,8 @@ dat_files %>%
 
 ## Run WHAM model(s) ----
 ## list all the folders with outputs; can grep() or select from here
-# greppy <- paste0('rep',c("1\\b","2\\b",3,4,5), collapse = "|")
-# greppy <- paste0('rep',15:20, collapse = "|")
+# greppy <- paste0('rep',c("1\\b","2\\b",3:10), collapse = "|")
+# greppy <- paste0('rep',1:10, collapse = "|")
 
  # files_to_run_done <-  c(files_to_run_done,files_to_run[1:10])
 files_to_run <-
@@ -105,16 +105,17 @@ files_to_run <-
 # .[grepl('\\bnoCC_noEvo',.)] #%>%
 # .[!grepl(paste(files_to_run_done,collapse ="|"), .)]
 
-dropme <- NULL ## this routine assumes you've cleared outdated runs
-for(i in seq_along(files_to_run)){
-  curr_dirs <- list.dirs(files_to_run[i], recursive = FALSE)
-  if(length(grep('mre.csv',list.files(files_to_run[i],recursive = TRUE))) == 0) {
-  # if(length(grep('retro',list.files(files_to_run[i],recursive = TRUE))) == 16) {
-    dropme <- c(dropme, i) ## if there are 8 files x 2 coverages
-  }
-}
 
-files_to_run <- files_to_run[dropme]
+# dropme <- NULL ## this routine assumes you've cleared outdated runs
+# for(i in seq_along(files_to_run)){
+#   curr_dirs <- list.dirs(files_to_run[i], recursive = FALSE)
+#   if(length(grep('mre.csv',list.files(files_to_run[i],recursive = TRUE))) == 4) {
+#   # if(length(grep('retro',list.files(files_to_run[i],recursive = TRUE))) == 16) {
+#     dropme <- c(dropme, i) ## if there are 8 files x 2 coverages
+#   }
+# }
+#
+# files_to_run <- files_to_run[dropme]
 
 
 
@@ -127,7 +128,7 @@ cl <- makeCluster(cores)
 registerDoParallel(cl)
 
 foreach(file_use = files_to_run) %:%
-  foreach(fc_use = c(1, 0.15)) %dopar%  {
+  foreach(fc_use = c(0.05, 0.5)) %dopar%  {
     # setwd("C:/Users/maia.kapur/Work/projects/eco-evo-surv/")
   # for (fc_use in c(1,0.15)) {
 
@@ -154,130 +155,63 @@ stopCluster()
 ## Summarize results across all species, scenarios, simulations ----
 
 #* Filter results ----
-# files_to_run <- list.dirs.depth.n( here::here('outputs','wham_runs'), n = 4) %>%
-#   .[grepl('2024-05-16/rep',.)] %>%
-#   .[grepl('Herring',.)] %>%
-#   .[grepl('perfect_information',.)]
-
-mre_all0 <- list.files(
-  files_to_run,
-  pattern = 'mre.csv',
-  recursive = TRUE,
-  full.names = TRUE
-) %>%
-  # .[grepl('2024-11*',.)] %>%
-  lapply(., FUN = read.csv) %>%
-  bind_rows() %>%
-  dplyr::select(-inputN) %>%
-  filter(q_treatment == 'fixed'   & fc != 0.15001 ) %>%
-  distinct() ## drop old runs and duplicates
-
-## check how many ran (should be 27 each)
-summarise(mre_all0,
-          nrep = n() / 71, ## nyears
-          .by = c(scenario, species, fc))
-
-tt <- summarise(mre_all0,
-          nrep = n() / 71,
-          .by = c(scenario, species, fc))
-(3*4*28*2)-sum(tt$nrep) ## number that failed total
-
-## confirm fails across all spp
-tt %>%
-  mutate(nfail = 28-nrep) %>%
-  filter(nfail >0) %>%
-  summarise(.,
-            n_with_fail =n(),
-            .by = c(scenario))
-
-## IDs of fails to converge
-failed_to_converge <- mre_all0 %>%
-  filter(is.na(lower)) %>%
-  dplyr::select(scenario, replicate, species) %>%
-  distinct()
+# full_df0 <- parse_Outputs(files_to_run)
 
 
-## IDs of fails to execute
-failed_to_run <- summarise(mre_all0,
-          nrep = n() / 71,
-          .by = c(scenario, replicate, species)) %>%
-  tidyr::complete(replicate, scenario, species) %>%
-  filter(is.na(nrep)  ) %>%
-  arrange(species, scenario, replicate)
 
-mre_all_filter <- mre_all0 %>%
-  filter(!(replicate %in% failed_to_run$replicate)) %>% ## drop fails across-the-board
-  filter(!(replicate %in% failed_to_converge$replicate)) ## drop fails across-the-board
+full_df <- full_df0 %>%
+  filter(runs_test_passed & !is.na(ssb_true) )
 
-length(unique(mre_all_filter$replicate)) ## how many unique replicates remained
-nrow(mre_all_filter)/71 ## final total number of unique models run
-
-## now re-build files_to_run after filter
-kept_reps <- paste0('rep',sort(unique(mre_all_filter$replicate)) )
-files_to_run_filter1 <- files_to_run[grep(paste(kept_reps, collapse= "|"),files_to_run)]
-
-# Diagnostics ----
-# devtools::install_github("jabbamodel/ss3diags")
-#* run's test ----
-## do run's test and examine >10x resid > 2
-
-models_filtered <- list.files(files_to_run_filter1,pattern='*_model.rdata', recursive = TRUE,
-                              full.names = TRUE)
+write.csv(full_df,
+          file = here('outputs','summary_data',paste0(Sys.Date(),"-full_df_filtered.csv")),
+          row.names = FALSE)
 
 
-## placeholders for diag pass rates
-diags <- data.frame()
 
-for(i in seq_along(models_filtered)[1:4]){
+## check how many ran (should be 27 each plus 10 for sens)
+# summarise(mre_all0,
+#           nrep = n() / 71, ## nyears
+#           .by = c(scenario, species, fc))
+#
+# tt <- summarise(mre_all0,
+#           nrep = n() / 71,
+#           .by = c(scenario, species, fc))
+# (3*4*28*2)-sum(tt$nrep) ## number that failed total
+#
+# ## confirm fails across all spp
+# tt %>%
+#   mutate(nfail = 28-nrep) %>%
+#   filter(nfail >0) %>%
+#   summarise(.,
+#             n_with_fail =n(),
+#             .by = c(scenario))
+#
+#
+#
+#
+# ## check pass rates
+# diags %>%
+#   filter(complete.cases(.)) %>%
+#   summarise(n_total = n(),
+#             n_runs = sum(runs_test_passed),
+#             .by = c('species','fc')) %>%
+#   mutate(prop_passed = n_runs/n_total) %>%
+#   arrange(fc, species)
+#
+# diags %>%
+#   filter(complete.cases(.) & runs_test_passed) %>%
+#   summarise(n(), .by = 'fc')
 
-  ## populate data frame front matter
-  reppy <- as.numeric(gsub('rep','',basename(dirname(dirname(models_filtered[i])))))     ## yank the replicate
-  diags[i,'rep'] <- reppy
-  diags[i,'fc'] <- as.numeric(stringr::str_sub(basename(dirname(models_filtered[i])),21,-22))
-  diags[i,'scenario']  <- strsplit(basename(dirname(dirname(dirname(models_filtered[i])))),'-')[[1]][2]
-  diags[i,'species']  <- strsplit(basename(dirname(dirname(dirname(models_filtered[i])))),'-')[[1]][1]
-  diags[i,'runs_test']  <- NA
-
-
-  x <- try({
-    load(models_filtered[i], .GlobalEnv) ## will load as mod_use
-  })
-  if (!inherits(x, 'try-error')) next()
-  rep  <- mod_use$report()
-
-  ## do the run's test
-  resid <- data.frame(Obs = mod_use$env$data$agg_indices,
-                      Exp = rep$pred_indices) %>%
-    filter(Obs > 0 ) %>%
-    mutate(residuals = log(Obs)-log(Exp))
-  # devtools::install_github("jabbamodel/ss3diags")
-
-  runs_test<-ss3diags::ssruns_sig3(x=as.numeric(resid$residuals),type="resid")
-  diags[i,'runs_test_val']  <- runs_test$p.runs
-  diags[i,'runs_test_passed']  <- ifelse(runs_test$p.runs <= 0.05, FALSE, TRUE)
-
-  ## check the agecomp residuals, looking for > 10 outliers (>2)
-  # agecomp_resid <- merge(reshape2::melt(mod_use$env$data$catch_paa[1,,] ),
-  #                        reshape2::melt(rep$pred_catch_paa[,1,]) , by = c('Var1','Var2')) %>%
-  #   dplyr::select(year = Var1, age = Var2, Obs = value.x, Exp = value.y) %>%
-  #   mutate(pearson = (Exp-Obs)^2)
-  #
-  # diags[i,'age_pearson_val']  <-  sum(agecomp_resid$pearson > 2)
-  # diags[i,'age_pearson_passed']  <- ifelse( diags[i,'age_pearson_val']>=10,FALSE, TRUE)
-  write.csv(diags, file = here('outputs','summary_data',paste0(Sys.Date(),"-diags.csv")),
-            row.names = FALSE)
-}
-
-
-diags %>%
-  summarise(n_total = n(),
-            n_runs = sum(runs_test_passed),
-            n_comps  = sum(age_pearson_passed),
-            n_both = sum(runs_test_passed & age_pearson_passed),
-            .by = c('species','fc'))
-
-## finally drop individual models that failed either diagnostic
-
+## finally drop individual models that failed either diagnostic and include survey data for plotting
+# mre_all_filter <- merge(diags,
+#       mre_all_filter0,
+#       by.x = c('rep','fc','scenario','species'),
+#       by.y = c('replicate','fc','scenario','species'),
+#       all.x = FALSE) %>%
+#   filter(runs_test_passed)
+# write.csv(mre_all_filter,
+#           file = here('outputs','summary_data',paste0(Sys.Date(),"-mre_all_filter.csv")),
+#           row.names = FALSE)
 # mre_all<- mre_all_filter %>%
 #   group_by(year, scenario, species, fc,ewaa, q_treatment) %>%
 #   summarize(
@@ -300,12 +234,6 @@ mre_all <- mre_all_filter %>%
     upr95 = quantile(MRE_scaled, .975)
   )
 
-mre_all$q_treatment <- factor(mre_all$q_treatment, levels = c('fixed','estimated'))
-mre_all$q_treatment[is.na(mre_all$q_treatment)] <- 'estimated'
-
-mre_all$ewaa <- factor(mre_all$ewaa, levels = c('perfect','averaged'))
-mre_all$ewaa[is.na(mre_all$ewaa)] <- 'perfect'
-mre_all$fc <- factor(mre_all$fc, levels = c(1, 0.15))
 
 for (spp in unique(mre_all$species)) {
   # spp =  unique(mre_all$species)
@@ -373,6 +301,9 @@ write.csv(
   file = here('outputs', 'summary_data', paste0(Sys.Date(), '-mre_all.csv')),
   row.names = FALSE
 )
+
+
+
 
 ## OM Outputs ----
 #* 2060 map of biomass by spp ----
@@ -625,23 +556,7 @@ for (species in c(sppLabs2$Var2[sppLabs2$Var4])) {
   } ## end fractional coverage
 } ## end species
 
-#* input WAA at maturity across scenario----
-strip_waa <- function(x) {
-  tmpwaa <- read.table(x, sep = ' ', header = TRUE)
-  names(tmpwaa) <- 1:ncol(tmpwaa)
-  tmpwaa$year <- 2010:(2009 + nrow(tmpwaa))
 
-  filen2 = basename(x)
-  # filen2 <- basename(dirname(dirname(file_suffix)))
-  tmpwaa$scenario <- strsplit(filen2, '-')[[1]][2]
-  tmpwaa$rep <- strsplit(filen2, '-')[[1]][3]
-  tmpwaa$species <-   strsplit(filen2, '-')[[1]][1]
-  waa <-
-    reshape2::melt(tmpwaa, id = c('year', 'rep', 'scenario', 'species'))
-  names(waa)[5:6] <- c('age', 'weight_kg')
-  waa$age <- as.numeric(waa$age)
-  return(waa)
-}
 
 waa_index <- list.files(
   files_to_run,
