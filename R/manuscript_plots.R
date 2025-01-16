@@ -359,45 +359,8 @@ ggsave(last_plot(),
        file = here::here('figs','manuscript','catches.png'),
        width = 6, height = 8, dpi = 500, unit = 'in')
 
-#* OM  WAA  ----
-waa_index <- list.files(
-  files_to_run,
-  pattern = 'wham_waa_ssb_perfect.csv',
-  recursive = TRUE,
-  full.names = TRUE
-) %>%
-  lapply(., FUN = strip_waa) %>%
-  bind_rows() %>%
-  filter(!is.na(weight_kg)) %>%
-  group_by(year, scenario, species, age) %>%
-  summarize(
-    med = median(weight_kg),
-    lwr80 = quantile(weight_kg, .1),
-    upr80 = quantile(weight_kg, .90),
-    lwr95 = quantile(weight_kg, .0275),
-    upr95 = quantile(weight_kg, .975)
-  ) %>%
-  mutate(variable = 'waa')
 
-mataa_index <- list.files(
-  files_to_run,
-  pattern = 'wham_maturity.csv',
-  recursive = TRUE,
-  full.names = TRUE
-) %>%
-  lapply(., FUN = strip_waa) %>%
-  bind_rows() %>%
-  filter(!is.na(weight_kg)) %>%
-  group_by(year, scenario, species, age) %>%
-  summarize(
-    med = median(weight_kg),
-    lwr80 = quantile(weight_kg, .1),
-    upr80 = quantile(weight_kg, .90),
-    lwr95 = quantile(weight_kg, .0275),
-    upr95 = quantile(weight_kg, .975)
-  )%>%
-  mutate(variable = 'maturity')
-
+#* OM maturity and mortality ----
 
 maa_index <- list.files(
   files_to_run,
@@ -418,10 +381,97 @@ maa_index <- list.files(
   )%>%
   mutate(variable = 'mortality')
 
+mataa_index <- list.files(
+  files_to_run,
+  pattern = 'wham_maturity.csv',
+  recursive = TRUE,
+  full.names = TRUE
+) %>%
+  lapply(., FUN = strip_waa) %>%
+  bind_rows() %>%
+  filter(!is.na(weight_kg)) %>%
+  group_by(year, scenario, species, age) %>%
+  summarize(
+    med = median(weight_kg),
+    lwr80 = quantile(weight_kg, .1),
+    upr80 = quantile(weight_kg, .90),
+    lwr95 = quantile(weight_kg, .0275),
+    upr95 = quantile(weight_kg, .975)
+  )%>%
+  mutate(variable = 'maturity')
+
+tibble(bind_rows(maa_index,mataa_index)) %>%
+  filter(age == 3 & year < 2081) %>%
+  # mutate(variable = ifelse(variable == 'maturity','age 3 maturity',
+  #                          'age 3 mortality')) %>%
+  group_split(species) %>%
+  purrr::map({
+    ~ggplot(.x,aes(
+      x = year,
+      y = med,
+      group = interaction(scenario),
+      fill = scenario,
+      color = scenario
+    )
+    ) +
+      geom_line() +
+      geom_ribbon(aes(ymin = lwr80, ymax = upr80),
+                  alpha = 0.2,
+                  color = NA) +
+      scale_fill_manual(values = scenPal, labels = scenLabs) +
+      scale_color_manual(values = scenPal, labels = scenLabs) +
+      theme(strip.background = element_blank(),
+            legend.position = 'bottom') +
+
+      guides(fill=guide_legend(nrow=1,byrow=TRUE),
+             color =guide_legend(nrow=1,byrow=TRUE))+
+      facet_grid( species+variable ~ . ,
+                 scales = 'free',
+                 labeller = labeller(species = sppLabs,
+                                     scenario =  scenLabs))+
+      labs(
+        x = 'Year',
+        y = '',
+        color = '',
+        fill = ''
+      )
+
+  }) %>%
+  patchwork::wrap_plots(ncol = 1, guides = 'collect') &
+  guides(fill=guide_legend(nrow=2,byrow=TRUE),
+         color =guide_legend(nrow=2,byrow=TRUE)) &
+  theme(legend.position = 'bottom')
 
 
+ggsave(last_plot(),
+       file = here::here('figs','manuscript','OM_mortality_maturity.png'),
+       width = 6, height = 10, dpi = 500, unit = 'in')
 
-tibble(bind_rows(waa_index)) %>%
+#* OM mortality ----
+
+
+#* OM  WAA  ----
+waa_index <- list.files(
+  files_to_run,
+  pattern = 'wham_waa_ssb_perfect.csv',
+  recursive = TRUE,
+  full.names = TRUE
+) %>%
+  lapply(., FUN = strip_waa) %>%
+  bind_rows() %>%
+  filter(!is.na(weight_kg)) %>%
+  group_by(year, scenario, species, age) %>%
+  summarize(
+    med = median(weight_kg),
+    lwr80 = quantile(weight_kg, .1),
+    upr80 = quantile(weight_kg, .90),
+    lwr95 = quantile(weight_kg, .0275),
+    upr95 = quantile(weight_kg, .975)
+  ) %>%
+  mutate(variable = 'waa')
+
+
+tibble(waa_index) %>%
   filter(age == 3 & year < 2081) %>%
   group_split(species) %>%
   purrr::map({
@@ -444,7 +494,7 @@ tibble(bind_rows(waa_index)) %>%
 
       guides(fill=guide_legend(nrow=1,byrow=TRUE),
              color =guide_legend(nrow=1,byrow=TRUE))+
-      facet_grid(species ~ . ,
+      facet_grid(species ~ scenario ,
                  labeller = labeller(species = sppLabs,
                                      scenario =  scenLabs))+
       labs(
